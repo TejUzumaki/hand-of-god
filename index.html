@@ -204,6 +204,9 @@
         const warpMat = new THREE.MeshStandardMaterial({ color: 0x00FFFF, emissive: 0x00AAAA, emissiveIntensity: 0.8, roughness: 0.2, metalness: 0.5 });
         const doubleMat = new THREE.MeshStandardMaterial({ color: 0xFF00FF, emissive: 0xAA00AA, emissiveIntensity: 0.8, roughness: 0.2, metalness: 0.5 });
 
+        // Target origin for homing vectors
+        const origin = new THREE.Vector3(0, 0, 5); 
+
         function spawnSphere() {
             let mat = goldMat;
             let type = 'gold';
@@ -212,10 +215,25 @@
             else if (rand > 0.84) { mat = doubleMat; type = 'double'; }
 
             const mesh = new THREE.Mesh(sphereGeo, mat);
-            mesh.position.set((Math.random() - 0.5) * 30, (Math.random() - 0.5) * 20, -60 - (Math.random() * 40));
+            
+            // Spawn from 360 degrees around the center
+            const radius = 40;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const spawnPos = new THREE.Vector3(
+                radius * Math.sin(phi) * Math.cos(theta),
+                radius * Math.sin(phi) * Math.sin(theta),
+                radius * Math.cos(phi)
+            );
+            mesh.position.copy(spawnPos);
             mesh.scale.setScalar(0.5 + Math.random() * 0.5);
             scene.add(mesh);
-            spheres.push({ mesh, type, speed: 0.4 + Math.random() * 0.3, hit: false });
+
+            // Calculate direction vector towards the origin/camera plane
+            const dir = new THREE.Vector3().subVectors(origin, spawnPos).normalize();
+            const speed = 0.3 + Math.random() * 0.2;
+            
+            spheres.push({ mesh, type, velocity: dir.multiplyScalar(speed), hit: false });
         }
 
         // --- MEDIAPIPE HANDS ---
@@ -230,7 +248,8 @@
             handsTracker.setOptions({maxNumHands: 2, modelComplexity: 0, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5});
             handsTracker.onResults(onHandResults);
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                // Request FRONT camera for self-view
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
                 videoEl.srcObject = stream;
                 await videoEl.play();
                 processVideoFrame();
@@ -247,32 +266,30 @@
         }
 
         function onHandResults(results) {
-            handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
             latestHandLandmarks = [];
             if (results.multiHandLandmarks) {
                 results.multiHandLandmarks.forEach(landmarks => {
-                    // Mirror X coordinates for front camera feel, though using environment camera.
+                    // Mirror X coordinates for front camera self-view
                     const mapped = landmarks.map(p => ({ x: (1 - p.x) * handCanvas.width, y: p.y * handCanvas.height, z: p.z }));
                     latestHandLandmarks.push(mapped);
-                    drawHandSkeleton(mapped);
                 });
             }
         }
 
         function drawHandSkeleton(landmarks) {
             const connections = [
-                [0,1],[1,2],[2,3],[3,4], // Thumb
-                [0,5],[5,6],[6,7],[7,8], // Index
-                [5,9],[9,10],[10,11],[11,12], // Middle
-                [9,13],[13,14],[14,15],[15,16], // Ring
-                [13,17],[17,18],[18,19],[19,20], // Pinky
-                [0,17] // Palm base
+                [0,1],[1,2],[2,3],[3,4], 
+                [0,5],[5,6],[6,7],[7,8], 
+                [5,9],[9,10],[10,11],[11,12], 
+                [9,13],[13,14],[14,15],[15,16], 
+                [13,17],[17,18],[18,19],[19,20], 
+                [0,17] 
             ];
             
-            handCtx.strokeStyle = 'rgba(0, 170, 255, 0.8)';
-            handCtx.lineWidth = 3;
-            handCtx.shadowColor = 'rgba(0, 170, 255, 0.8)';
-            handCtx.shadowBlur = 10;
+            handCtx.strokeStyle = 'rgba(0, 170, 255, 1)';
+            handCtx.lineWidth = 4;
+            handCtx.shadowColor = 'rgba(0, 170, 255, 1)';
+            handCtx.shadowBlur = 15;
             
             connections.forEach(([i, j]) => {
                 handCtx.beginPath();
@@ -281,35 +298,61 @@
                 handCtx.stroke();
             });
 
-            handCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            handCtx.fillStyle = 'rgba(255, 255, 255, 1)';
             landmarks.forEach(p => {
                 handCtx.beginPath();
-                handCtx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                handCtx.arc(p.x, p.y, 6, 0, Math.PI * 2);
                 handCtx.fill();
             });
             handCtx.shadowBlur = 0;
         }
 
-        // --- COLLISION DETECTION ---
-        function checkCollisions() {
-            if (latestHandLandmarks.length === 0) return;
+        // --- COLLISION DETECTION & TRAIL DRAWING ---
+        function checkCollisionsAndDrawTrails() {
+            if (handCanvas.width !== window.innerWidth) {
+                handCanvas.width = window.innerWidth;
+                handCanvas.height = window.innerHeight;
+            }
+            handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+
+            // Draw hands
+            latestHandLandmarks.forEach(drawHandSkeleton);
 
             for (let i = spheres.length - 1; i >= 0; i--) {
                 const s = spheres[i];
                 if (s.hit) continue;
 
-                // Project 3D sphere to 2D screen
+                // Project 3D sphere to 2D screen for collision and trail
                 const vector = s.mesh.position.clone().project(camera);
                 const sx = (vector.x * 0.5 + 0.5) * handCanvas.width;
                 const sy = (-vector.y * 0.5 + 0.5) * handCanvas.height;
 
-                // Check distance to any finger tip (4, 8, 12, 16, 20)
+                // Draw Anime Speed Lines (Trail)
+                const trailLength = 40;
+                const trailEndVec = s.mesh.position.clone().sub(s.velocity.clone().multiplyScalar(trailLength)).project(camera);
+                const tx = (trailEndVec.x * 0.5 + 0.5) * handCanvas.width;
+                const ty = (-trailEndVec.y * 0.5 + 0.5) * handCanvas.height;
+                
+                handCtx.beginPath();
+                handCtx.moveTo(tx, ty);
+                handCtx.lineTo(sx, sy);
+                let trailColor = 'rgba(255, 215, 0, 0.8)'; // Gold
+                if (s.type === 'warp') trailColor = 'rgba(0, 255, 255, 0.8)';
+                if (s.type === 'double') trailColor = 'rgba(255, 0, 255, 0.8)';
+                handCtx.strokeStyle = trailColor;
+                handCtx.lineWidth = 3 * (1 - vector.z); // Scale by depth
+                handCtx.shadowColor = trailColor;
+                handCtx.shadowBlur = 10;
+                handCtx.stroke();
+                handCtx.shadowBlur = 0;
+
+                // Check distance to any finger tip
                 const tips = [4, 8, 12, 16, 20];
                 for (const hand of latestHandLandmarks) {
                     for (const tipIdx of tips) {
                         const p = hand[tipIdx];
                         const dist = Math.sqrt((p.x - sx)**2 + (p.y - sy)**2);
-                        if (dist < 30) { // Hit radius
+                        if (dist < 35) { 
                             s.hit = true;
                             handleSphereHit(s);
                             break;
@@ -328,7 +371,6 @@
             if (s.type === 'gold') {
                 combo++;
                 let points = 1 * (doubleScoreActive ? 2 : 1);
-                // Combo multiplier
                 if (combo > 3) points += Math.floor(combo / 3);
                 score += points;
                 updateHUD();
@@ -466,7 +508,7 @@
         // --- GAME FLOW ---
         async function startCountdown() {
             if (gameStarted) return;
-            await initMediaPipe(); // Ensure camera starts for both players when match begins
+            await initMediaPipe(); 
             let count = 3; ui.countdownText.style.opacity = 1; ui.countdownText.textContent = count;
             const interval = setInterval(() => {
                 count--;
@@ -479,11 +521,10 @@
         function startMatch() {
             timeLeft = 180; score = 0; enemyScore = 0; combo = 0;
             updateHUD();
-            // Main timer
             const timerInterval = setInterval(() => {
                 if (!gameStarted) { clearInterval(timerInterval); return; }
                 timeLeft--;
-                if (combo > 0 && timeLeft % 3 === 0) combo = 0; // Reset combo periodically if not hitting
+                if (combo > 0 && timeLeft % 3 === 0) combo = 0; 
                 updateHUD();
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
@@ -491,7 +532,6 @@
                 }
             }, 1000);
             
-            // AI Simulation for Solo Mode
             if (isSoloMode) {
                 const aiInterval = setInterval(() => {
                     if (!gameStarted) { clearInterval(aiInterval); return; }
@@ -517,7 +557,6 @@
             requestAnimationFrame(animate);
             const dt = Math.min((time - lastTime) / 16.67, 2); lastTime = time;
             
-            // Resize canvases if needed
             if (handCanvas.width !== window.innerWidth) {
                 handCanvas.width = window.innerWidth;
                 handCanvas.height = window.innerHeight;
@@ -528,8 +567,14 @@
 
             if (gameStarted) {
                 spawnTimer += dt;
-                const spawnRate = timeWarpActive ? 90 : 40; // frames
-                if (spawnTimer > spawnRate) {
+                
+                // Difficulty curve: Start with 1-2 balls, ramp up.
+                // Time starts at 180, goes to 0.
+                const progress = 1 - (timeLeft / 180); // 0 to 1
+                const maxSpheres = Math.floor(2 + (progress * 8)); // 2 to 10 spheres
+                const spawnRate = timeWarpActive ? 120 : (60 - (progress * 40)); // 60 frames to 20 frames
+
+                if (spawnTimer > spawnRate && spheres.length < maxSpheres) {
                     spawnTimer = 0;
                     spawnSphere();
                 }
@@ -537,25 +582,28 @@
                 const speedMod = timeWarpActive ? 0.4 : 1.0;
                 for (let i = spheres.length - 1; i >= 0; i--) {
                     const s = spheres[i];
-                    s.mesh.position.z += s.speed * speedMod * dt;
+                    s.mesh.position.x += s.velocity.x * speedMod * dt;
+                    s.mesh.position.y += s.velocity.y * speedMod * dt;
+                    s.mesh.position.z += s.velocity.z * speedMod * dt;
+                    
                     s.mesh.rotation.x += 0.05 * dt;
                     s.mesh.rotation.y += 0.05 * dt;
                     
-                    // Cleanup if missed
+                    // Cleanup if it passes the camera
                     if (s.mesh.position.z > 15) {
                         scene.remove(s.mesh);
                         spheres.splice(i, 1);
-                        if (s.type === 'gold') combo = 0; // Reset combo on miss
+                        if (s.type === 'gold') combo = 0; 
                     }
                 }
-                checkCollisions();
+                checkCollisionsAndDrawTrails();
                 updateHUD();
                 if (con && con.open) sendPacket({ type: 'state', score: score });
             } else if (menuActive) {
-                // Slowly rotate camera in menu for dynamic feel
                 camera.position.x = Math.sin(time * 0.0002) * 5;
                 camera.position.y = Math.cos(time * 0.0002) * 3;
                 camera.lookAt(0, 0, 0);
+                handCtx.clearRect(0,0,handCanvas.width, handCanvas.height);
             }
             renderer.render(scene, camera);
         }
