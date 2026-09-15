@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>HAND OF GOD</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <style>
+        :root {
+            --bg: #000000;
+            --panel: #0a0a0a;
+            --border: #2a2a2a;
+            --text: #ffffff;
+            --grey: #777777;
+            --gold: #FFD700;
+            --red: #ff0033;
+            --blue: #00aaff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        html, body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', sans-serif; overflow: hidden; touch-action: none; width: 100%; height: 100%; position: fixed; }
+
+        .clip-corner { clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); }
+
+        #game-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; display: block; }
+        #hand-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10; pointer-events: none; }
+        #cam-video { position: fixed; bottom: -100%; right: -100%; width: 1px; height: 1px; opacity: 0; z-index: -1; }
+
+        #ui-layer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 50; pointer-events: none; }
+        #ui-layer > * { pointer-events: auto; }
+
+        /* MAIN MENU */
+        #menu-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); 
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 200; padding: 32px;
+            transition: opacity 0.5s ease;
+        }
+        #menu-overlay.hidden { opacity: 0; pointer-events: none; }
+        .menu-content { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 16px; }
+        .menu-title { font-size: 56px; font-weight: 700; text-transform: uppercase; letter-spacing: 4px; line-height: 0.9; text-align: center; margin-bottom: 8px; color: var(--text); }
+        .menu-title span { color: var(--gold); display: block; font-size: 24px; letter-spacing: 8px; margin-top: 4px; }
+        .menu-subtitle { font-size: 11px; color: var(--grey); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 32px; font-family: 'JetBrains Mono', monospace; text-align: center; }
+        
+        .menu-btn { display: flex; align-items: center; justify-content: center; gap: 12px; background: #000000; color: #ffffff; border: 1px solid var(--border); padding: 18px 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; font-size: 14px; cursor: pointer; width: 100%; transition: background 0.2s, border-color 0.2s; }
+        .menu-btn:hover { border-color: var(--text); }
+        .menu-btn:active { background: #222; }
+        .menu-btn.primary { border-color: var(--gold); color: var(--gold); }
+        .menu-btn.secondary { border-color: var(--blue); color: var(--blue); }
+        
+        .menu-panel { background: #050505; border: 1px solid var(--border); padding: 16px; margin-top: 8px; width: 100%; display: none; }
+        .menu-panel.active { display: block; }
+        .menu-input { width: 100%; background: #111; border: 1px solid var(--border); color: var(--text); padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 16px; text-align: center; margin-bottom: 12px; letter-spacing: 2px; text-transform: uppercase; }
+        .menu-input:focus { outline: none; border-color: var(--text); }
+        
+        .code-display { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px; }
+        .copy-btn { background: var(--border); color: var(--text); border: none; padding: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .copy-btn:active { background: var(--grey); }
+        .host-status { font-size: 10px; color: var(--grey); margin-top: 8px; text-transform: uppercase; text-align: center; font-family: 'JetBrains Mono', monospace; }
+        
+        .menu-back { font-size: 10px; color: var(--grey); text-transform: uppercase; letter-spacing: 2px; cursor: pointer; text-align: center; margin-top: 16px; font-family: 'JetBrains Mono', monospace; text-decoration: underline; }
+
+        /* HUD */
+        .hud-panel { position: absolute; background: rgba(0,0,0,0.75); border: 1px solid var(--border); padding: 12px 16px; backdrop-filter: blur(4px); display: none; }
+        .hud-panel.active { display: block; }
+        .hud-label { font-size: 9px; color: var(--grey); text-transform: uppercase; letter-spacing: 2px; font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; }
+        .hud-value { font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--text); line-height: 1; }
+        
+        #score-panel { top: 16px; left: 16px; }
+        #score-panel .hud-value { color: var(--gold); }
+        
+        #enemy-panel { top: 16px; right: 16px; text-align: right; }
+        #enemy-panel .hud-value { color: var(--red); }
+
+        #timer-panel { top: 16px; left: 50%; transform: translateX(-50%); text-align: center; }
+        #timer-panel .hud-value { font-size: 32px; }
+
+        #combo-panel { bottom: 40px; left: 50%; transform: translateX(-50%); text-align: center; border-color: var(--blue); display: none; }
+        #combo-panel.active { display: block; animation: pulse 0.5s infinite alternate; }
+        #combo-panel .hud-value { color: var(--blue); font-size: 24px; }
+        @keyframes pulse { from { transform: translateX(-50%) scale(1); } to { transform: translateX(-50%) scale(1.05); } }
+
+        /* COUNTDOWN */
+        #countdown-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 150; pointer-events: none; }
+        #countdown-text { font-size: 120px; font-weight: 700; color: var(--text); text-shadow: 0 0 20px rgba(255,255,255,0.5); opacity: 0; transition: opacity 0.2s; font-family: 'Space Grotesk', sans-serif; letter-spacing: 4px; }
+
+        .status-indicator { position: absolute; bottom: 16px; left: 16px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--grey); text-align: left; text-transform: uppercase; background: rgba(0,0,0,0.7); padding: 8px 12px; border: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+        .status-dot { display: inline-block; width: 8px; height: 8px; background: var(--red); animation: blink 1s infinite; }
+        .status-dot.connected { background: var(--blue); animation: none; }
+        @keyframes blink { 50% { opacity: 0.3; } }
+    </style>
+</head>
+<body>
+    <video id="cam-video" autoplay playsinline muted></video>
+    <canvas id="game-canvas"></canvas>
+    <canvas id="hand-overlay"></canvas>
+
+    <div id="ui-layer">
+        <div id="score-panel" class="hud-panel clip-corner">
+            <div class="hud-label">YOUR SCORE</div>
+            <div class="hud-value" id="score-val">0</div>
+        </div>
+        <div id="timer-panel" class="hud-panel clip-corner">
+            <div class="hud-label">TIME</div>
+            <div class="hud-value" id="timer-val">3:00</div>
+        </div>
+        <div id="enemy-panel" class="hud-panel clip-corner">
+            <div class="hud-label">ENEMY</div>
+            <div class="hud-value" id="enemy-val">0</div>
+        </div>
+        <div id="combo-panel" class="hud-panel clip-corner">
+            <div class="hud-label">STREAK</div>
+            <div class="hud-value" id="combo-val">x1</div>
+        </div>
+
+        <div class="status-indicator clip-corner">
+            P2P<span class="status-dot" id="status-dot"></span>
+        </div>
+
+        <div id="countdown-overlay"><div id="countdown-text">3</div></div>
+    </div>
+
+    <!-- MAIN MENU -->
+    <div id="menu-overlay">
+        <div class="menu-content">
+            <div class="menu-title">HAND<span>OF GOD</span></div>
+            <div class="menu-subtitle">Divine Reflex Trial</div>
+            
+            <button class="menu-btn primary" id="btn-solo">
+                SOLO TRIAL (AI)
+            </button>
+            
+            <button class="menu-btn secondary" id="btn-host">
+                HOST DUEL
+            </button>
+            <div class="menu-panel clip-corner" id="host-container">
+                <div class="code-display">
+                    <div style="font-family:'JetBrains Mono', monospace; font-size:24px; letter-spacing:4px; color:var(--text);" id="room-display">------</div>
+                    <button class="copy-btn clip-corner" id="btn-copy">COPY</button>
+                </div>
+                <div class="host-status" id="host-status">Waiting for opponent...</div>
+            </div>
+
+            <button class="menu-btn secondary" id="btn-join">
+                JOIN DUEL
+            </button>
+            <div class="menu-panel clip-corner" id="join-container">
+                <input type="text" id="room-input" class="menu-input" maxlength="6" placeholder="ENTER CODE">
+                <button class="menu-btn" id="btn-connect" style="background:#fff; color:#000; border-color:#fff;">
+                    CONNECT
+                </button>
+            </div>
+
+            <div class="menu-back" id="btn-back" style="display:none;">BACK TO MENU</div>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL STATE ---
+        let isHost = false, peer = null, con = null, roomCode = '';
+        let gameStarted = false, menuActive = true;
+        let isSoloMode = false;
+        let score = 0, enemyScore = 0, combo = 0, timeLeft = 180;
+        let isReady = false, peerIsReady = false;
+        let timeWarpActive = false, doubleScoreActive = false;
+        let powerUpTimers = [];
+
+        // --- AUTO FULLSCREEN ---
+        function enterFullscreen() {
+            const el = document.documentElement;
+            const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+            if (req) { try { req.call(el).catch(()=>{}); } catch(e) {} }
+        }
+        document.addEventListener('touchstart', () => { if (!document.fullscreenElement && gameStarted) enterFullscreen(); }, { passive: true });
+        document.addEventListener('click', () => { if (!document.fullscreenElement && gameStarted) enterFullscreen(); });
+
+        // --- THREE.JS SETUP ---
+        const canvas = document.getElementById('game-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050505);
+        scene.fog = new THREE.Fog(0x050505, 30, 120);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 250);
+        camera.position.set(0, 0, 15); camera.lookAt(0, 0, 0);
+
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x000000, 0.8);
+        scene.add(hemiLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        dirLight.position.set(10, 10, 20); scene.add(dirLight);
+
+        // --- SPHERE POOLING & MECHANICS ---
+        const spheres = [];
+        const sphereGeo = new THREE.IcosahedronGeometry(1, 0);
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xFFD700, emissive: 0xFFAA00, emissiveIntensity: 0.6, roughness: 0.3, metalness: 0.8 });
+        const warpMat = new THREE.MeshStandardMaterial({ color: 0x00FFFF, emissive: 0x00AAAA, emissiveIntensity: 0.8, roughness: 0.2, metalness: 0.5 });
+        const doubleMat = new THREE.MeshStandardMaterial({ color: 0xFF00FF, emissive: 0xAA00AA, emissiveIntensity: 0.8, roughness: 0.2, metalness: 0.5 });
+
+        function spawnSphere() {
+            let mat = goldMat;
+            let type = 'gold';
+            const rand = Math.random();
+            if (rand > 0.92) { mat = warpMat; type = 'warp'; }
+            else if (rand > 0.84) { mat = doubleMat; type = 'double'; }
+
+            const mesh = new THREE.Mesh(sphereGeo, mat);
+            mesh.position.set((Math.random() - 0.5) * 30, (Math.random() - 0.5) * 20, -60 - (Math.random() * 40));
+            mesh.scale.setScalar(0.5 + Math.random() * 0.5);
+            scene.add(mesh);
+            spheres.push({ mesh, type, speed: 0.4 + Math.random() * 0.3, hit: false });
+        }
+
+        // --- MEDIAPIPE HANDS ---
+        const videoEl = document.getElementById('cam-video');
+        const handCanvas = document.getElementById('hand-overlay');
+        const handCtx = handCanvas.getContext('2d');
+        let handsTracker = null;
+        let latestHandLandmarks = [];
+
+        async function initMediaPipe() {
+            handsTracker = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+            handsTracker.setOptions({maxNumHands: 2, modelComplexity: 0, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5});
+            handsTracker.onResults(onHandResults);
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                videoEl.srcObject = stream;
+                await videoEl.play();
+                processVideoFrame();
+            } catch(e) {
+                console.error("Camera access denied or failed", e);
+            }
+        }
+
+        async function processVideoFrame() {
+            if (videoEl.readyState >= 2) {
+                await handsTracker.send({image: videoEl});
+            }
+            requestAnimationFrame(processVideoFrame);
+        }
+
+        function onHandResults(results) {
+            handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+            latestHandLandmarks = [];
+            if (results.multiHandLandmarks) {
+                results.multiHandLandmarks.forEach(landmarks => {
+                    // Mirror X coordinates for front camera feel, though using environment camera.
+                    const mapped = landmarks.map(p => ({ x: (1 - p.x) * handCanvas.width, y: p.y * handCanvas.height, z: p.z }));
+                    latestHandLandmarks.push(mapped);
+                    drawHandSkeleton(mapped);
+                });
+            }
+        }
+
+        function drawHandSkeleton(landmarks) {
+            const connections = [
+                [0,1],[1,2],[2,3],[3,4], // Thumb
+                [0,5],[5,6],[6,7],[7,8], // Index
+                [5,9],[9,10],[10,11],[11,12], // Middle
+                [9,13],[13,14],[14,15],[15,16], // Ring
+                [13,17],[17,18],[18,19],[19,20], // Pinky
+                [0,17] // Palm base
+            ];
+            
+            handCtx.strokeStyle = 'rgba(0, 170, 255, 0.8)';
+            handCtx.lineWidth = 3;
+            handCtx.shadowColor = 'rgba(0, 170, 255, 0.8)';
+            handCtx.shadowBlur = 10;
+            
+            connections.forEach(([i, j]) => {
+                handCtx.beginPath();
+                handCtx.moveTo(landmarks[i].x, landmarks[i].y);
+                handCtx.lineTo(landmarks[j].x, landmarks[j].y);
+                handCtx.stroke();
+            });
+
+            handCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            landmarks.forEach(p => {
+                handCtx.beginPath();
+                handCtx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                handCtx.fill();
+            });
+            handCtx.shadowBlur = 0;
+        }
+
+        // --- COLLISION DETECTION ---
+        function checkCollisions() {
+            if (latestHandLandmarks.length === 0) return;
+
+            for (let i = spheres.length - 1; i >= 0; i--) {
+                const s = spheres[i];
+                if (s.hit) continue;
+
+                // Project 3D sphere to 2D screen
+                const vector = s.mesh.position.clone().project(camera);
+                const sx = (vector.x * 0.5 + 0.5) * handCanvas.width;
+                const sy = (-vector.y * 0.5 + 0.5) * handCanvas.height;
+
+                // Check distance to any finger tip (4, 8, 12, 16, 20)
+                const tips = [4, 8, 12, 16, 20];
+                for (const hand of latestHandLandmarks) {
+                    for (const tipIdx of tips) {
+                        const p = hand[tipIdx];
+                        const dist = Math.sqrt((p.x - sx)**2 + (p.y - sy)**2);
+                        if (dist < 30) { // Hit radius
+                            s.hit = true;
+                            handleSphereHit(s);
+                            break;
+                        }
+                    }
+                    if (s.hit) break;
+                }
+            }
+        }
+
+        function handleSphereHit(s) {
+            scene.remove(s.mesh);
+            const idx = spheres.indexOf(s);
+            if (idx > -1) spheres.splice(idx, 1);
+
+            if (s.type === 'gold') {
+                combo++;
+                let points = 1 * (doubleScoreActive ? 2 : 1);
+                // Combo multiplier
+                if (combo > 3) points += Math.floor(combo / 3);
+                score += points;
+                updateHUD();
+            } else if (s.type === 'warp') {
+                timeWarpActive = true;
+                updateHUD();
+                clearTimeout(powerUpTimers['warp']);
+                powerUpTimers['warp'] = setTimeout(() => { timeWarpActive = false; }, 5000);
+            } else if (s.type === 'double') {
+                doubleScoreActive = true;
+                updateHUD();
+                clearTimeout(powerUpTimers['double']);
+                powerUpTimers['double'] = setTimeout(() => { doubleScoreActive = false; }, 7000);
+            }
+        }
+
+        // --- P2P NETWORKING ---
+        const ui = {
+            menu: document.getElementById('menu-overlay'),
+            btnSolo: document.getElementById('btn-solo'), btnHost: document.getElementById('btn-host'), btnJoin: document.getElementById('btn-join'), btnBack: document.getElementById('btn-back'),
+            joinCont: document.getElementById('join-container'), hostCont: document.getElementById('host-container'),
+            roomInput: document.getElementById('room-input'), btnConnect: document.getElementById('btn-connect'),
+            roomDisplay: document.getElementById('room-display'), btnCopy: document.getElementById('btn-copy'),
+            hostStatus: document.getElementById('host-status'), statusDot: document.getElementById('status-dot'),
+            scoreVal: document.getElementById('score-val'), enemyVal: document.getElementById('enemy-val'), timerVal: document.getElementById('timer-val'),
+            comboVal: document.getElementById('combo-val'), comboPanel: document.getElementById('combo-panel'),
+            scorePanel: document.getElementById('score-panel'), enemyPanel: document.getElementById('enemy-panel'), timerPanel: document.getElementById('timer-panel'),
+            countdownText: document.getElementById('countdown-text')
+        };
+
+        function updateHUD() {
+            ui.scoreVal.textContent = score;
+            ui.enemyVal.textContent = enemyScore;
+            let mins = Math.floor(timeLeft / 60);
+            let secs = timeLeft % 60;
+            ui.timerVal.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            
+            if (combo > 1) { ui.comboPanel.classList.add('active'); ui.comboVal.textContent = `x${combo}`; }
+            else { ui.comboPanel.classList.remove('active'); }
+        }
+
+        function generateRoomCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let res = '';
+            for (let i = 0; i < 6; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+            return res;
+        }
+
+        function showMainMenuButtons() {
+            ui.btnHost.style.display = 'flex'; ui.btnJoin.style.display = 'flex'; ui.btnSolo.style.display = 'flex';
+            ui.btnBack.style.display = 'none';
+            ui.hostCont.classList.remove('active'); ui.joinCont.classList.remove('active');
+        }
+
+        function showBackButton() {
+            ui.btnHost.style.display = 'none'; ui.btnJoin.style.display = 'none'; ui.btnSolo.style.display = 'none';
+            ui.btnBack.style.display = 'block';
+        }
+
+        ui.btnSolo.onclick = async () => {
+            enterFullscreen();
+            isSoloMode = true; isHost = false; menuActive = false; ui.menu.classList.add('hidden');
+            ui.scorePanel.classList.add('active'); ui.enemyPanel.classList.add('active'); ui.timerPanel.classList.add('active');
+            await initMediaPipe();
+            startCountdown();
+        };
+
+        ui.btnHost.onclick = async () => {
+            enterFullscreen(); isHost = true; roomCode = generateRoomCode();
+            ui.hostCont.classList.add('active'); showBackButton();
+            ui.roomDisplay.textContent = roomCode;
+            try {
+                peer = new Peer(roomCode + '_hog', { debug: 0 });
+                peer.on('open', () => { ui.statusDot.classList.remove('connected'); });
+                peer.on('error', (err) => { ui.hostStatus.textContent = "PEER ERROR: " + (err.type || 'unknown'); });
+                peer.on('connection', (conn) => { con = conn; setupConnection(); });
+            } catch(e) { ui.hostStatus.textContent = "NETWORK ERROR"; }
+        };
+
+        ui.btnJoin.onclick = () => { enterFullscreen(); ui.joinCont.classList.add('active'); showBackButton(); };
+        ui.btnBack.onclick = () => { showMainMenuButtons(); };
+
+        ui.btnCopy.onclick = () => {
+            const textToCopy = ui.roomDisplay.textContent;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    ui.hostStatus.textContent = "CODE COPIED TO CLIPBOARD";
+                    setTimeout(() => { ui.hostStatus.textContent = "Waiting for opponent..."; }, 2000);
+                }).catch(() => fallbackCopy(textToCopy));
+            } else fallbackCopy(textToCopy);
+        };
+
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); ui.hostStatus.textContent = "CODE COPIED"; } catch(e) {}
+            document.body.removeChild(ta); setTimeout(() => { ui.hostStatus.textContent = "Waiting for opponent..."; }, 2000);
+        }
+
+        ui.btnConnect.onclick = async () => {
+            roomCode = ui.roomInput.value.toUpperCase().trim();
+            if (roomCode.length !== 6) { ui.roomInput.style.borderColor = 'var(--red)'; return; }
+            isHost = false;
+            try {
+                peer = new Peer({ debug: 0 });
+                peer.on('open', () => { con = peer.connect(roomCode + '_hog', { reliable: false }); setupConnection(); });
+                peer.on('error', (err) => { ui.hostStatus.textContent = "PEER ERROR: " + (err.type || 'unknown'); });
+            } catch(e) { ui.hostStatus.textContent = "NETWORK ERROR"; }
+        };
+
+        function setupConnection() {
+            con.on('open', () => {
+                ui.statusDot.classList.add('connected'); ui.menu.classList.add('hidden'); menuActive = false;
+                ui.scorePanel.classList.add('active'); ui.enemyPanel.classList.add('active'); ui.timerPanel.classList.add('active');
+                isReady = true; sendPacket({ type: 'ready' });
+                if (peerIsReady) checkReady();
+            });
+            con.on('data', (data) => handlePacket(data));
+            con.on('close', () => { setTimeout(() => location.reload(), 1500); });
+        }
+
+        function sendPacket(pkt) { if (con && con.open) { try { con.send(pkt); } catch (e) {} } }
+
+        function handlePacket(pkt) {
+            if (pkt.type === 'state') { enemyScore = pkt.score; updateHUD(); }
+            else if (pkt.type === 'ready') { peerIsReady = true; if (isReady) checkReady(); }
+            else if (pkt.type === 'start') { startCountdown(); }
+            else if (pkt.type === 'end') { endMatch(enemyScore < score); }
+        }
+
+        function checkReady() {
+            if(isReady && peerIsReady && !gameStarted) {
+                if (isHost) { sendPacket({ type: 'start' }); startCountdown(); }
+            }
+        }
+
+        // --- GAME FLOW ---
+        async function startCountdown() {
+            if (gameStarted) return;
+            await initMediaPipe(); // Ensure camera starts for both players when match begins
+            let count = 3; ui.countdownText.style.opacity = 1; ui.countdownText.textContent = count;
+            const interval = setInterval(() => {
+                count--;
+                if (count > 0) ui.countdownText.textContent = count;
+                else if (count === 0) ui.countdownText.textContent = "GO";
+                else { clearInterval(interval); ui.countdownText.style.opacity = 0; gameStarted = true; startMatch(); }
+            }, 1000);
+        }
+
+        function startMatch() {
+            timeLeft = 180; score = 0; enemyScore = 0; combo = 0;
+            updateHUD();
+            // Main timer
+            const timerInterval = setInterval(() => {
+                if (!gameStarted) { clearInterval(timerInterval); return; }
+                timeLeft--;
+                if (combo > 0 && timeLeft % 3 === 0) combo = 0; // Reset combo periodically if not hitting
+                updateHUD();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    endMatch(score > enemyScore);
+                }
+            }, 1000);
+            
+            // AI Simulation for Solo Mode
+            if (isSoloMode) {
+                const aiInterval = setInterval(() => {
+                    if (!gameStarted) { clearInterval(aiInterval); return; }
+                    if (Math.random() > 0.4) {
+                        enemyScore += 1 + Math.floor(Math.random() * 2);
+                    }
+                    updateHUD();
+                }, 1500);
+            }
+        }
+
+        function endMatch(won) {
+            gameStarted = false;
+            ui.countdownText.style.opacity = 1;
+            ui.countdownText.textContent = won ? "VICTORY" : "DEFEAT";
+            if (con && con.open) sendPacket({ type: 'end' });
+            setTimeout(() => { location.reload(); }, 4000);
+        }
+
+        // --- MAIN LOOP ---
+        let lastTime = 0; let spawnTimer = 0;
+        function animate(time) {
+            requestAnimationFrame(animate);
+            const dt = Math.min((time - lastTime) / 16.67, 2); lastTime = time;
+            
+            // Resize canvases if needed
+            if (handCanvas.width !== window.innerWidth) {
+                handCanvas.width = window.innerWidth;
+                handCanvas.height = window.innerHeight;
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+            }
+
+            if (gameStarted) {
+                spawnTimer += dt;
+                const spawnRate = timeWarpActive ? 90 : 40; // frames
+                if (spawnTimer > spawnRate) {
+                    spawnTimer = 0;
+                    spawnSphere();
+                }
+
+                const speedMod = timeWarpActive ? 0.4 : 1.0;
+                for (let i = spheres.length - 1; i >= 0; i--) {
+                    const s = spheres[i];
+                    s.mesh.position.z += s.speed * speedMod * dt;
+                    s.mesh.rotation.x += 0.05 * dt;
+                    s.mesh.rotation.y += 0.05 * dt;
+                    
+                    // Cleanup if missed
+                    if (s.mesh.position.z > 15) {
+                        scene.remove(s.mesh);
+                        spheres.splice(i, 1);
+                        if (s.type === 'gold') combo = 0; // Reset combo on miss
+                    }
+                }
+                checkCollisions();
+                updateHUD();
+                if (con && con.open) sendPacket({ type: 'state', score: score });
+            } else if (menuActive) {
+                // Slowly rotate camera in menu for dynamic feel
+                camera.position.x = Math.sin(time * 0.0002) * 5;
+                camera.position.y = Math.cos(time * 0.0002) * 3;
+                camera.lookAt(0, 0, 0);
+            }
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            handCanvas.width = window.innerWidth;
+            handCanvas.height = window.innerHeight;
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        });
+
+        handCanvas.width = window.innerWidth;
+        handCanvas.height = window.innerHeight;
+        animate(0);
+    </script>
+</body>
+</html>
