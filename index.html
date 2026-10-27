@@ -4,11 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#edf3ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <title>The Hand of God</title>
 <style>
 :root{--ink:#17233d;--muted:#68758c;--line:rgba(72,93,143,.18)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#eaf0ff;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;overscroll-behavior:none}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#eaf0ff;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;overscroll-behavior:none;touch-action:manipulation}
 button,input{font:inherit}button{cursor:pointer}
 button:focus-visible,input:focus-visible{outline:3px solid #5d72ff;outline-offset:2px}
 #app{position:fixed;inset:0;overflow:hidden;background:radial-gradient(ellipse at 20% 15%,#fff 0,transparent 45%),radial-gradient(ellipse at 80% 80%,#cbd9ff 0,transparent 48%),linear-gradient(135deg,#edf5ff,#dce7ff)}
@@ -17,38 +19,55 @@ button:focus-visible,input:focus-visible{outline:3px solid #5d72ff;outline-offse
 #lightWash{position:absolute;inset:0;background:rgba(255,255,255,.3);pointer-events:none}
 #threeLayer,#handLayer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #threeLayer{z-index:2}#handLayer{z-index:3}
-#topbar{position:absolute;z-index:10;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;pointer-events:none}
-.brand,#connectionBadge,.hudCard,#gestureHint{background:rgba(255,255,255,.8);border:1px solid var(--line);backdrop-filter:blur(14px);box-shadow:0 8px 28px rgba(54,73,128,.08)}
+#topbar{position:absolute;z-index:10;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;pointer-events:none;transition:opacity .4s}
+#topRight{display:flex;gap:8px;align-items:center}
+.brand,#connectionBadge,.hudCard,#gestureHint,#fsBtn{background:rgba(255,255,255,.8);border:1px solid var(--line);backdrop-filter:blur(14px);box-shadow:0 8px 28px rgba(54,73,128,.08)}
 .brand{padding:9px 13px;border-radius:16px}
 .brand strong{display:block;font-size:12px;letter-spacing:.17em;text-transform:uppercase}
 .brand span{display:block;margin-top:2px;font-size:10px;color:var(--muted);letter-spacing:.08em}
 #connectionBadge{padding:9px 12px;border-radius:14px;font-size:11px;font-weight:800;letter-spacing:.08em;white-space:nowrap}
-#hud{position:absolute;z-index:9;top:calc(max(12px,env(safe-area-inset-top)) + 58px);left:12px;right:12px;display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;pointer-events:none}
-.hudCard{padding:10px 12px;min-width:0;border-radius:16px}
+#fsBtn{pointer-events:auto;width:38px;height:38px;border-radius:12px;font-size:17px;color:#26324b;padding:0}
+#hud{position:absolute;z-index:9;top:calc(max(12px,env(safe-area-inset-top)) + 58px);left:12px;right:12px;display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;pointer-events:none;transition:all .4s}
+.hudCard{padding:10px 12px;min-width:0;border-radius:16px;transition:all .4s}
 .hudLabel{color:var(--muted);font-size:9px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}
-.hudValue{margin-top:3px;font-size:clamp(17px,4vw,24px);font-weight:900;line-height:1.15}
+.hudValue{margin-top:3px;font-size:clamp(17px,4vw,24px);font-weight:900;line-height:1.15;transition:font-size .4s}
 #scoreValue{color:#5369fa}#comboValue{color:#009eac}
 #centerMessage{position:absolute;z-index:8;top:43%;left:50%;width:min(90%,380px);transform:translate(-50%,-50%);text-align:center;pointer-events:none;text-shadow:0 2px 18px rgba(255,255,255,.9);display:none}
 .big{font-size:clamp(34px,8vw,58px);font-weight:900;letter-spacing:-.055em;line-height:.98}
 .small{margin-top:12px;color:#45536f;font-size:12px;font-weight:700;line-height:1.6}
 #toast{position:absolute;z-index:15;top:calc(max(12px,env(safe-area-inset-top)) + 125px);left:50%;transform:translate(-50%,-10px);padding:10px 16px;max-width:90%;border-radius:999px;color:#24324d;background:rgba(255,255,255,.92);box-shadow:0 8px 30px rgba(35,50,90,.12);font-size:12px;font-weight:900;text-align:center;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
 #toast.show{opacity:1;transform:translate(-50%,0)}
-#bottomBar{position:absolute;z-index:10;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));display:none;align-items:center;justify-content:space-between;gap:10px;pointer-events:none}
-#gestureHint{max-width:75%;padding:10px 13px;border-radius:15px;font-size:11px;line-height:1.45;color:#35425e}
+#bottomBar{position:absolute;z-index:10;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));display:none;align-items:center;justify-content:space-between;gap:8px;pointer-events:none;transition:opacity .4s}
+#gestureHint{flex:1;min-width:0;padding:10px 13px;border-radius:15px;font-size:11px;line-height:1.45;color:#35425e}
 #gestureState{color:#5369fa;font-weight:900}
-#exitBtn{pointer-events:auto;padding:11px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.88);color:#26324b;font-size:11px;font-weight:900}
+.barBtn{pointer-events:auto;padding:11px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.88);color:#26324b;font-size:11px;font-weight:900;white-space:nowrap}
+#camStatus{position:absolute;z-index:12;right:12px;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 62px);display:none;max-width:70%;padding:8px 11px;border-radius:12px;background:rgba(255,255,255,.84);color:#4b5b76;font-size:10px;font-weight:800;pointer-events:none;transition:opacity .4s}
+/* picture-in-picture friend camera */
+#pip{position:absolute;z-index:7;right:12px;top:calc(max(12px,env(safe-area-inset-top)) + 128px);width:min(30vw,132px);aspect-ratio:3/4;border-radius:16px;overflow:hidden;border:2px solid #fff;box-shadow:0 10px 30px rgba(35,50,90,.25);background:#111;display:none;transition:top .4s}
+#pip video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+#pipName{position:absolute;left:0;right:0;bottom:0;padding:3px 6px;font-size:9px;font-weight:900;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.6));text-align:center}
+/* auto-hide: only compact scoreboard + opponent stay */
+.idle #topbar,.idle #bottomBar,.idle #camStatus{opacity:0}
+.idle #topbar *,.idle #bottomBar *,.idle #camStatus{pointer-events:none!important}
+.idle #hud{top:calc(max(8px,env(safe-area-inset-top)) + 2px);left:50%;right:auto;transform:translateX(-50%);grid-template-columns:repeat(3,auto);gap:5px}
+.idle .hudCard{padding:4px 10px;border-radius:11px}
+.idle .hudLabel{display:none}
+.idle .hudValue{font-size:15px;margin:0}
+.idle #pip{top:calc(max(8px,env(safe-area-inset-top)) + 46px)}
 .screen{position:absolute;z-index:20;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;background:rgba(237,243,255,.5);backdrop-filter:blur(7px)}
-.panel{width:min(100%,440px);padding:clamp(20px,5vw,32px);border:1px solid rgba(255,255,255,.95);border-radius:30px;background:rgba(255,255,255,.88);box-shadow:0 24px 90px rgba(49,66,118,.17);text-align:center}
+.screen.sheet{background:none;backdrop-filter:none;align-items:flex-end;padding:12px;pointer-events:none}
+.screen.sheet .panel{pointer-events:auto;padding:16px}
+.panel{width:min(100%,440px);margin:auto;padding:clamp(20px,5vw,32px);border:1px solid rgba(255,255,255,.95);border-radius:30px;background:rgba(255,255,255,.9);box-shadow:0 24px 90px rgba(49,66,118,.17);text-align:center}
 .eyebrow{display:inline-block;padding:7px 11px;border-radius:999px;background:#eef0ff;color:#5969e8;font-size:9px;font-weight:900;letter-spacing:.15em;text-transform:uppercase}
 .orb{width:76px;height:76px;margin:16px auto;display:grid;place-items:center;border-radius:26px;color:#fff;font-size:36px;background:linear-gradient(140deg,#8290ff,#42d9eb);box-shadow:0 14px 35px rgba(92,117,255,.28);transform:rotate(-7deg)}
 h1{margin:14px 0 0;font-size:clamp(32px,8vw,45px);line-height:.99;letter-spacing:-.06em;font-weight:900}
-.subtitle{margin:12px auto 18px;max-width:320px;color:var(--muted);font-size:13px;line-height:1.65}
-.primaryBtn,.secondaryBtn,.smallBtn{width:100%;min-height:48px;padding:13px 16px;border-radius:15px;border:0;font-weight:900;transition:transform .12s,opacity .12s}
+.subtitle{margin:12px auto 16px;max-width:340px;color:var(--muted);font-size:13px;line-height:1.65}
+.primaryBtn,.secondaryBtn,.smallBtn{width:100%;min-height:46px;padding:12px 16px;border-radius:15px;border:0;font-weight:900;transition:transform .12s,opacity .12s}
 .primaryBtn:active,.secondaryBtn:active,.smallBtn:active{transform:scale(.98)}
 button:disabled{opacity:.5}
 .primaryBtn{color:#fff;background:linear-gradient(110deg,#6476ff,#48cfe6);box-shadow:0 9px 24px rgba(93,113,255,.2)}
 .secondaryBtn{margin-top:10px;color:#33415e;border:1px solid var(--line);background:rgba(255,255,255,.82)}
-.smallBtn{min-height:42px;color:#5366ef;border:1px solid #dfe4ff;background:#f3f5ff;font-size:12px}
+.smallBtn{margin-top:8px;min-height:42px;color:#5366ef;border:1px solid #dfe4ff;background:#f3f5ff;font-size:12px}
 .input{width:100%;min-height:48px;margin-bottom:10px;padding:12px 14px;border:1px solid #dfe5f1;border-radius:14px;color:var(--ink);background:#fff;text-align:center;font-size:15px;font-weight:800}
 .roomCode{margin:14px 0;padding:14px;border:1px dashed #a8b4ff;border-radius:16px;background:#f3f5ff;color:#5267f2;font-size:29px;font-weight:900;letter-spacing:.24em;user-select:all}
 .instructions{margin-top:16px;padding:12px 14px;border-radius:16px;background:rgba(239,243,255,.75);text-align:left}
@@ -56,9 +75,17 @@ button:disabled{opacity:.5}
 .instructionRow b{min-width:22px;color:#5267f2;font-size:14px}
 .hidden{display:none!important}
 .resultScore{margin:14px 0;font-size:55px;font-weight:900;letter-spacing:-.06em;color:#586df8}
-#statusText{min-height:18px;margin:10px 0;color:#67738b;font-size:11px;line-height:1.5}
-#camStatus{position:absolute;z-index:12;right:12px;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 62px);display:none;max-width:70%;padding:8px 11px;border-radius:12px;background:rgba(255,255,255,.84);color:#4b5b76;font-size:10px;font-weight:800;pointer-events:none}
-@media(max-height:650px){.orb{width:52px;height:52px;margin:8px auto;font-size:26px}.subtitle{margin:8px auto 12px}.instructions{margin-top:10px}}
+#statusText,#tutStatus{min-height:18px;margin:8px 0;color:#67738b;font-size:11px;line-height:1.5}
+.checks{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:10px 0}
+.checks span{padding:6px 10px;border-radius:999px;background:#f0f2fa;color:#68758c;font-size:11px;font-weight:900}
+.checks span.ok{background:#dcf7ea;color:#15935a}
+#historyList{max-height:46vh;overflow-y:auto;text-align:left;margin:14px 0 6px}
+.card{margin:8px 0;padding:12px 14px;border-radius:16px;background:#f5f7ff;border:1px solid #e1e6fb;border-left:5px solid #98a3d6}
+.card.win{border-left-color:#27b57a}.card.loss{border-left-color:#e5586d}
+.cardTop{display:flex;justify-content:space-between;gap:8px;font-size:10px;font-weight:800;color:#68758c}
+.cardRes{margin-top:4px;font-size:15px;font-weight:900}
+.cardSub{margin-top:2px;font-size:11px;color:#68758c}
+@media(max-height:650px){.orb{width:52px;height:52px;margin:8px auto;font-size:26px}.subtitle{margin:8px auto 12px}.instructions{display:none}}
 </style>
 </head>
 <body>
@@ -70,7 +97,7 @@ button:disabled{opacity:.5}
 
   <header id="topbar">
     <div class="brand"><strong>The Hand of God</strong><span>YOUR HANDS. YOUR POWER.</span></div>
-    <div id="connectionBadge" role="status" aria-live="polite">● STANDBY</div>
+    <div id="topRight"><div id="connectionBadge" role="status" aria-live="polite">● STANDBY</div><button id="fsBtn" aria-label="Toggle fullscreen">⛶</button></div>
   </header>
 
   <section id="hud" aria-label="Scoreboard">
@@ -79,12 +106,15 @@ button:disabled{opacity:.5}
     <div class="hudCard"><div class="hudLabel">Combo</div><div class="hudValue" id="comboValue">×1</div></div>
   </section>
 
+  <div id="pip"><video id="remoteVideo" autoplay playsinline muted></video><div id="pipName">FRIEND</div></div>
+
   <div id="centerMessage"></div>
   <div id="toast" role="status" aria-live="polite"></div>
 
   <div id="bottomBar">
     <div id="gestureHint"><span id="gestureState">READY</span><br><span id="gestureText"></span></div>
-    <button id="exitBtn">EXIT ✕</button>
+    <button class="barBtn" id="trackBtn" aria-label="Reinitialize hand tracking">↻ TRACKING</button>
+    <button class="barBtn" id="exitBtn">EXIT ✕</button>
   </div>
   <div id="camStatus" role="status" aria-live="polite">Camera is starting…</div>
 
@@ -96,12 +126,26 @@ button:disabled{opacity:.5}
       <p class="subtitle">Control a living field of energy with your real hands. Catch spheres, throw them through the golden ring, and chain combos.</p>
       <button class="primaryBtn" id="soloBtn">PLAY SOLO</button>
       <button class="secondaryBtn" id="onlineBtn">ONLINE DUEL</button>
+      <button class="secondaryBtn" id="historyBtn">MATCH HISTORY</button>
+      <button class="secondaryBtn" id="tutBtn">TUTORIAL · TEST HAND TRACKING</button>
       <div class="instructions">
-        <div class="instructionRow"><b>✋</b><span><strong>Open your palm</strong> over a sphere to catch it. Power-ups are collected the same way.</span></div>
+        <div class="instructionRow"><b>✋</b><span><strong>Open palm</strong> over a sphere to catch it. Power-ups are collected the same way.</span></div>
         <div class="instructionRow"><b>✊</b><span><strong>Close your fist</strong> to throw. Hit the golden ring to score.</span></div>
-        <div class="instructionRow"><b>〰</b><span>Your index fingertip draws a fading energy trail.</span></div>
+        <div class="instructionRow"><b>〰</b><span>Your fingertip leaves a fading ink trail.</span></div>
       </div>
       <div id="homeStatus" class="subtitle" style="margin-bottom:0;font-size:11px"></div>
+    </div>
+  </section>
+
+  <section class="screen sheet hidden" id="tutorialScreen">
+    <div class="panel">
+      <div class="eyebrow">✦ PRACTICE · HAND TRACKING</div>
+      <p class="subtitle" style="margin:10px auto">Hold your hand up to the camera. A skeleton should appear. If it doesn't within a few seconds, tap Reinitialize — no page reload needed.</p>
+      <div class="checks"><span id="ck1">○ Hand seen</span><span id="ck2">○ Open palm</span><span id="ck3">○ Fist</span></div>
+      <div id="tutStatus" role="status" aria-live="polite"></div>
+      <button class="primaryBtn" id="reinitBtn">↻ REINITIALIZE HAND TRACKING</button>
+      <button class="smallBtn" id="offlineBtn">⬇ SAVE TRACKER ON THIS DEVICE</button>
+      <button class="secondaryBtn" id="tutDoneBtn" disabled>CONTINUE</button>
     </div>
   </section>
 
@@ -109,7 +153,7 @@ button:disabled{opacity:.5}
     <div class="panel">
       <div class="eyebrow">✦ PEER-TO-PEER MULTIPLAYER</div>
       <h1>ONLINE<br>DUEL</h1>
-      <p class="subtitle">Create a room or enter a friend's six-character code.</p>
+      <p class="subtitle">Create a room or enter a friend's six-character code. You'll see each other's hands and camera.</p>
       <input id="playerName" class="input" maxlength="16" placeholder="Your player name" value="Player" aria-label="Player name">
       <button class="primaryBtn" id="hostBtn">CREATE ROOM</button>
       <div id="hostRoomArea" class="hidden">
@@ -145,7 +189,19 @@ button:disabled{opacity:.5}
       <p class="subtitle" id="resultDescription"></p>
       <div class="resultScore" id="resultScore">000</div>
       <button class="primaryBtn" id="againBtn">PLAY AGAIN</button>
+      <button class="secondaryBtn" id="resultHistBtn">MATCH HISTORY</button>
       <button class="secondaryBtn" id="resultHomeBtn">MAIN MENU</button>
+    </div>
+  </section>
+
+  <section class="screen hidden" id="historyScreen">
+    <div class="panel">
+      <div class="eyebrow">✦ SAVED MATCHES</div>
+      <h1>MATCH<br>HISTORY</h1>
+      <p class="subtitle" id="histSummary" style="margin-bottom:0"></p>
+      <div id="historyList"></div>
+      <button class="secondaryBtn" id="clearHistBtn">CLEAR HISTORY</button>
+      <button class="secondaryBtn" id="histBackBtn">BACK</button>
     </div>
   </section>
 </div>
@@ -157,17 +213,17 @@ button:disabled{opacity:.5}
 <script>
 (() => {
 'use strict';
-/* THE HAND OF GOD v2
-   - One source of truth for orb positions (normalized screen coords, simulated once per frame).
-   - Online: HOST is authoritative (orbs, ownership, scoring, clock). Guest sends its hand, renders snapshots.
-   - Match id + sequence numbers reject stale packets. One lifecycle: resetSession().            */
+/* THE HAND OF GOD v3
+   New: fullscreen + auto-hide UI, first-run tutorial with tracker reinit (no page reloads), auto-restart watchdog,
+   tracker cached on device (Cache Storage), ink-bleed trail, opponent hand skeleton, PiP friend camera (PeerJS media),
+   saved match history. Online is host-authoritative; packets carry match id + sequence numbers. */
 
 const $ = id => document.getElementById(id);
 const ui = {};
-['camera','threeLayer','handLayer','lightWash','homeScreen','onlineScreen','waitingScreen','resultScreen','hud','centerMessage','bottomBar','connectionBadge','scoreValue','timerValue','comboValue','gestureState','gestureText','toast','camStatus','homeStatus','statusText','hostRoomArea','roomCodeDisplay','lobbyCode','lobbyStatus','lobbyDescription','readyBtn','hostBtn','joinBtn'].forEach(k => ui[k] = $(k));
-const SCREENS = [ui.homeScreen, ui.onlineScreen, ui.waitingScreen, ui.resultScreen];
+['app','camera','threeLayer','handLayer','homeScreen','onlineScreen','waitingScreen','resultScreen','tutorialScreen','historyScreen','hud','centerMessage','bottomBar','connectionBadge','scoreValue','timerValue','comboValue','gestureState','gestureText','toast','camStatus','homeStatus','statusText','hostRoomArea','roomCodeDisplay','lobbyCode','lobbyStatus','lobbyDescription','readyBtn','hostBtn','joinBtn','pip','remoteVideo','pipName','tutStatus','ck1','ck2','ck3','reinitBtn','offlineBtn','tutDoneBtn','historyList','histSummary'].forEach(k => ui[k] = $(k));
+const SCREENS = [ui.homeScreen, ui.onlineScreen, ui.waitingScreen, ui.resultScreen, ui.tutorialScreen, ui.historyScreen];
 
-const TAN = Math.tan(21 * Math.PI / 180), CAM_Z = 12, GOAL_R = 0.1, MATCH_SEC = 180, SOLO_TARGET = 200;
+const TAN = Math.tan(21 * Math.PI / 180), CAM_Z = 12, GOAL_R = 0.1, MATCH_SEC = 180, SOLO_TARGET = 200, IDLE_MS = 2500;
 const CONN = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
 const r3 = v => Math.round(v * 1000) / 1000;
 const num = (v, d, lo, hi) => (typeof v === 'number' && isFinite(v)) ? Math.min(hi, Math.max(lo, v)) : d;
@@ -175,11 +231,12 @@ const GESTURES = ['open', 'fist', 'point', 'partial', 'none'];
 const newP = () => ({ score: 0, combo: 1, hits: 0, held: null, doubleUntil: 0, hand: null, lastG: 'none' });
 
 const G = { mode: 'solo', phase: 'idle', mid: 0, epoch: 0, endAt: 0, timeLeft: MATCH_SEC, nid: 1, orbs: [], goal: { x: .5, y: .3 },
-  P: [newP(), newP()], spawnAt: 0, seq: 0, lastSeq: -1, lastSend: 0, lastHandSend: 0, lastHud: 0, evq: [], remoteHand: null, cleared: false };
-const H = { active: false, session: 0, stream: null, list: [], nextId: 1, lastT: -1 };
-const net = { peer: null, conn: null, isHost: false, ok: false, code: '', name: 'Player', remote: 'Opponent', lReady: false, rReady: false, closing: false, joinT: 0 };
+  P: [newP(), newP()], spawnAt: 0, seq: 0, lastSeq: -1, lastSend: 0, lastHandSend: 0, lastHud: 0, evq: [], remoteHand: null, cleared: false, tut: false, idleOn: false, saved: false };
+const H = { active: false, session: 0, stream: null, list: [], nextId: 1, lastT: -1, lastResultAt: 0, autoCount: 0, mpP: null, rs: 0, re: false };
+const net = { peer: null, conn: null, isHost: false, ok: false, code: '', name: 'Player', remote: 'Opponent', lReady: false, rReady: false, closing: false, joinT: 0, calls: [] };
+const TUT = { hand: false, open: false, fist: false, next: null, keepCam: false };
 
-let renderer, scene, cam, goalMesh, mp = null, toastT = 0, particles = [];
+let renderer, scene, cam, goalMesh, mp = null, toastT = 0, particles = [], lastTouch = performance.now();
 const cx = ui.handLayer.getContext('2d');
 let GEO_CORE, GEO_HALO, GEO_P;
 
@@ -192,6 +249,8 @@ function showScreen(s) { SCREENS.forEach(x => x.classList.add('hidden')); if (s)
 const setBadge = t => ui.connectionBadge.textContent = '● ' + t;
 function toast(t, ms = 1500) { ui.toast.textContent = t; ui.toast.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => ui.toast.classList.remove('show'), ms); }
 function setCenter(big, small) { ui.centerMessage.innerHTML = '<div class="big">' + big + '</div><div class="small">' + small + '</div>'; ui.centerMessage.style.display = 'block'; }
+const setTrack = t => { ui.camStatus.textContent = t; ui.tutStatus.textContent = t; };
+const setLobbyStatus = t => ui.lobbyStatus.textContent = t || '';
 const fmt = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
 function renderReady() { ui.readyBtn.textContent = net.lReady ? 'READY ✓' : "I'M READY"; ui.readyBtn.disabled = !net.ok || net.lReady; }
 function updateHUD() {
@@ -199,6 +258,35 @@ function updateHUD() {
   ui.scoreValue.textContent = String(p.score).padStart(3, '0');
   ui.timerValue.textContent = fmt(Math.max(0, Math.ceil(G.timeLeft)));
   ui.comboValue.textContent = '×' + p.combo + (performance.now() < p.doubleUntil ? ' · 2×' : '');
+}
+/* fullscreen */
+const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+function tryFS(force) {
+  if (fsEl()) return;
+  const e = document.documentElement, f = e.requestFullscreen || e.webkitRequestFullscreen;
+  if (!f) { if (force) toast('iPhone: Share → Add to Home Screen for fullscreen', 3200); return; }
+  try { const p = f.call(e); if (p && p.catch) p.catch(() => {}); } catch (_) {}
+}
+function toggleFS() { if (fsEl()) { const x = document.exitFullscreen || document.webkitExitFullscreen; if (x) x.call(document); } else tryFS(true); }
+
+/* ---------- Local storage: tutorial flag + match history ---------- */
+const HK = 'hog_history_v1', TK = 'hog_tutorial_done';
+const tutDone = () => { try { return localStorage.getItem(TK) === '1'; } catch (_) { return false; } };
+const loadHist = () => { try { return JSON.parse(localStorage.getItem(HK)) || []; } catch (_) { return []; } };
+function saveMatch(rec) { try { const a = loadHist(); a.unshift(rec); localStorage.setItem(HK, JSON.stringify(a.slice(0, 60))); } catch (_) {} }
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+function renderHistory() {
+  const a = loadHist(), box = ui.historyList; box.textContent = '';
+  const solo = a.filter(r => r.mode === 'solo').map(r => r.me);
+  ui.histSummary.textContent = a.length ? a.length + ' matches saved' + (solo.length ? ' · best solo score ' + Math.max(...solo) : '') : '';
+  if (!a.length) { box.appendChild(el('p', 'subtitle', 'No matches yet. Play one!')); return; }
+  for (const r of a) {
+    const c = el('div', 'card ' + (r.res === 'win' ? 'win' : r.res === 'loss' ? 'loss' : ''));
+    const top = el('div', 'cardTop'); top.appendChild(el('span', '', new Date(r.ts).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }))); top.appendChild(el('span', '', r.mode === 'solo' ? 'SOLO' : 'DUEL'));
+    c.appendChild(top); c.appendChild(el('div', 'cardRes', r.label + ' · ' + r.me + ' pts'));
+    c.appendChild(el('div', 'cardSub', r.mode === 'solo' ? 'Target ' + r.target : 'vs ' + r.opp + ' (' + r.them + ' pts)'));
+    box.appendChild(c);
+  }
 }
 
 /* ---------- Three.js ---------- */
@@ -214,15 +302,14 @@ function initThree() {
   const b = new THREE.PointLight(0x44e7f2, 2, 35); b.position.set(5, -3, 7); scene.add(b);
   GEO_CORE = new THREE.SphereGeometry(0.42, 24, 18);
   GEO_HALO = new THREE.SphereGeometry(0.64, 20, 14);
-  GEO_P = new THREE.SphereGeometry(0.045, 8, 6); // shared particle geometry, never disposed per particle
-  goalMesh = new THREE.Mesh(new THREE.TorusGeometry(GOAL_R * 2 * TAN * CAM_Z, 0.07, 10, 48),
-    new THREE.MeshBasicMaterial({ color: 0xffb938, transparent: true, opacity: .9 }));
+  GEO_P = new THREE.SphereGeometry(0.045, 8, 6);
+  goalMesh = new THREE.Mesh(new THREE.TorusGeometry(GOAL_R * 2 * TAN * CAM_Z, 0.07, 10, 48), new THREE.MeshBasicMaterial({ color: 0xffb938, transparent: true, opacity: .9 }));
   scene.add(goalMesh);
   resize();
 }
 function resize() {
   const w = innerWidth, h = innerHeight;
-  ui.handLayer.width = w; ui.handLayer.height = h; // 1x backing store keeps the overlay cheap on phones
+  ui.handLayer.width = w; ui.handLayer.height = h;
   if (renderer) { renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.7)); renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
 }
 function makeMesh(o) {
@@ -245,19 +332,20 @@ function burst(x, y, color, n = 12) {
 
 /* ---------- Session lifecycle (single reset path) ---------- */
 function resetSession() {
-  G.epoch++; G.phase = 'idle'; G.nid = 1; G.timeLeft = MATCH_SEC; G.seq = 0; G.lastSeq = -1; G.spawnAt = 0; G.evq = []; G.remoteHand = null;
+  G.epoch++; G.phase = 'idle'; G.tut = false; G.nid = 1; G.timeLeft = MATCH_SEC; G.seq = 0; G.lastSeq = -1; G.spawnAt = 0; G.evq = []; G.remoteHand = null; G.saved = false;
   G.P = [newP(), newP()]; G.goal = { x: .5, y: .3 };
-  G.orbs.forEach(o => killMesh(o.mesh)); G.orbs = [];
-  particles.forEach(p => { scene.remove(p.m); p.m.material.dispose(); }); particles = [];
+  if (scene) {
+    G.orbs.forEach(o => killMesh(o.mesh)); G.orbs = [];
+    particles.forEach(p => { scene.remove(p.m); p.m.material.dispose(); }); particles = [];
+  }
   H.list.forEach(h => { h.trail = []; });
   ui.hud.style.display = 'none'; ui.bottomBar.style.display = 'none'; ui.centerMessage.style.display = 'none';
+  ui.app.classList.remove('idle'); G.idleOn = false;
 }
 function beginMatch(mid) {
-  resetSession(); G.mid = mid; G.phase = 'countdown';
+  resetSession(); G.mid = mid; G.phase = 'countdown'; lastTouch = performance.now();
   showScreen(null); ui.hud.style.display = 'grid'; ui.bottomBar.style.display = 'flex';
-  ui.gestureText.textContent = G.mode === 'solo'
-    ? 'Reach ' + SOLO_TARGET + ' points · palm catches · fist throws into the ring'
-    : 'Outscore your rival · palm catches · fist throws into the ring';
+  ui.gestureText.textContent = G.mode === 'solo' ? 'Reach ' + SOLO_TARGET + ' pts · palm catches · fist throws into the ring' : 'Outscore your rival · palm catches · fist throws';
   setBadge(G.mode === 'solo' ? 'SOLO TRIAL' : 'DUEL');
   const ep = G.epoch; let c = 3;
   setCenter(c, 'Find a glowing sphere.');
@@ -267,7 +355,7 @@ function beginMatch(mid) {
     clearInterval(t);
     ui.centerMessage.style.display = 'none';
     const now = performance.now();
-    G.phase = 'playing'; G.endAt = now + MATCH_SEC * 1000; G.timeLeft = MATCH_SEC; G.spawnAt = now; G.lastHud = 0;
+    G.phase = 'playing'; G.endAt = now + MATCH_SEC * 1000; G.timeLeft = MATCH_SEC; G.spawnAt = now; G.lastHud = 0; lastTouch = now;
     if (isAuth()) { moveGoal(); for (let i = 0; i < 5; i++) spawn(); }
     toast('GO · CONTROL THE ENERGY', 1600);
   }, 900);
@@ -284,35 +372,105 @@ async function startSolo() {
   }
   beginMatch(Date.now() % 1e6);
 }
-function exitToMenu() { resetSession(); stopCamera(); showScreen(ui.homeScreen); setBadge('STANDBY'); }
+function exitToMenu() { resetSession(); stopCamera(); showScreen(ui.homeScreen); setBadge('STANDBY'); showPip(false); }
 
-/* ---------- Hand tracking ---------- */
+/* ---------- Tutorial ---------- */
+async function openTutorial(next, keepCam) {
+  resetSession(); G.tut = true; TUT.hand = TUT.open = TUT.fist = false; TUT.next = next || null; TUT.keepCam = !!keepCam;
+  ['ck1', 'ck2', 'ck3'].forEach((k, i) => { ui[k].className = ''; ui[k].textContent = '○ ' + ['Hand seen', 'Open palm', 'Fist'][i]; });
+  ui.tutDoneBtn.disabled = true; ui.tutDoneBtn.textContent = 'CONTINUE';
+  showScreen(ui.tutorialScreen); setBadge('PRACTICE');
+  const ep = G.epoch;
+  try { await startCamera(ep); } catch (e) { if (ep === G.epoch) setTrack((e.message || 'Camera error') + ' — tap Reinitialize.'); }
+}
+function tutStep() {
+  const h = primaryHand(performance.now());
+  if (h) { TUT.hand = true; if (h.g === 'open') TUT.open = true; if (h.g === 'fist') TUT.fist = true; }
+  [['ck1', TUT.hand, 'Hand seen'], ['ck2', TUT.open, 'Open palm'], ['ck3', TUT.fist, 'Fist']].forEach(([k, v, t]) => {
+    const want = (v ? '✓ ' : '○ ') + t; if (ui[k].textContent !== want) { ui[k].textContent = want; ui[k].className = v ? 'ok' : ''; }
+  });
+  const done = TUT.hand && TUT.open && TUT.fist, txt = done ? 'START PLAYING ✓' : 'CONTINUE';
+  ui.tutDoneBtn.disabled = !TUT.hand; if (ui.tutDoneBtn.textContent !== txt) ui.tutDoneBtn.textContent = txt;
+}
+function finishTutorial() {
+  try { localStorage.setItem(TK, '1'); } catch (_) {}
+  const next = TUT.next; G.tut = false;
+  if (next) { if (!TUT.keepCam) stopCamera(); next(); } else exitToMenu();
+}
+
+/* ---------- MediaPipe: cache on device, warm-up, reinit ---------- */
+const MP_VER = '0.4.1675469240', MP_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@' + MP_VER + '/';
+const MP_FILES = ['hands_solution_packed_assets_loader.js', 'hands_solution_simd_wasm_bin.js', 'hands_solution_simd_wasm_bin.wasm', 'hands_solution_packed_assets.data', 'hands_solution_wasm_bin.js', 'hands_solution_wasm_bin.wasm', 'hands.binarypb', 'hand_landmark_full.tflite'];
+const mime = f => f.endsWith('.js') ? 'text/javascript' : f.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream';
+const mpBlob = {};
+async function mpCacheLoad() { // turn cached files into blob URLs; returns true when every file is cached
+  if (!('caches' in window)) return false;
+  const c = await caches.open('hog-mp-' + MP_VER); let n = 0;
+  for (const f of MP_FILES) { const r = await c.match(MP_BASE + f); if (r) { mpBlob[f] = URL.createObjectURL(new Blob([await r.arrayBuffer()], { type: mime(f) })); n++; } }
+  return n === MP_FILES.length;
+}
+async function mpCacheDownload(onProgress) {
+  if (!('caches' in window)) throw new Error('Offline storage is not supported in this browser.');
+  const c = await caches.open('hog-mp-' + MP_VER);
+  for (let i = 0; i < MP_FILES.length; i++) {
+    const u = MP_BASE + MP_FILES[i];
+    if (!await c.match(u)) { const r = await fetch(u); if (!r.ok) throw new Error('Download failed (' + r.status + ')'); await c.put(u, r); }
+    onProgress(i + 1);
+  }
+  await mpCacheLoad();
+}
+async function createMP() {
+  if (!window.Hands) throw new Error('MediaPipe library did not load');
+  const m = new Hands({ locateFile: f => mpBlob[f] || MP_BASE + f });
+  m.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: .55, minTrackingConfidence: .5 });
+  m.onResults(onHandResults);
+  await Promise.race([m.initialize(), new Promise((_, rej) => setTimeout(() => rej(new Error('Tracker start timed out')), 20000))]);
+  return m;
+}
+function ensureMP() { return H.mpP || (H.mpP = createMP().then(m => { mp = m; return m; }).catch(e => { H.mpP = null; throw e; })); }
+function startTracking() { H.active = true; H.session++; H.lastResultAt = performance.now(); pump(H.session); }
+async function reinit() { // restart tracking without reloading the page
+  setTrack('Reinitializing hand tracking…'); ui.reinitBtn.disabled = true;
+  H.session++; H.active = false; H.list = [];
+  const old = mp; mp = null; H.mpP = null;
+  try { if (old) await old.close(); } catch (_) {}
+  try {
+    await ensureMP();
+    if (!H.stream) await startCamera(G.epoch); else startTracking();
+    setTrack('Tracker restarted · show your hand');
+  } catch (e) { setTrack('Could not start tracker: ' + (e.message || e) + ' — tap again.'); }
+  ui.reinitBtn.disabled = false;
+}
+function watchdog(now) { // no tracker output for 6s → restart automatically (max 2 tries until results flow again)
+  if (!H.active || !H.stream || H.re || H.autoCount >= 2 || now - H.lastResultAt < 6000) return;
+  H.autoCount++; H.re = true; setTrack('Tracking is slow — restarting automatically…');
+  reinit().finally(() => { H.re = false; });
+}
+
+/* ---------- Camera + hand tracking ---------- */
 async function startCamera(ep) {
-  ui.camStatus.style.display = 'block'; ui.camStatus.textContent = 'Requesting camera permission…';
+  ui.camStatus.style.display = 'block'; setTrack('Requesting camera permission…');
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Camera access needs HTTPS or localhost.');
-  if (!window.Hands) throw new Error('MediaPipe failed to load. Check your connection and reload.');
+  if (!window.Hands) throw new Error('MediaPipe failed to load. Check your connection.');
   if (!H.stream) {
     const s = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30, max: 30 } } });
     if (ep !== G.epoch) { s.getTracks().forEach(t => t.stop()); return false; }
     H.stream = s;
-    s.getVideoTracks()[0].onended = () => { H.active = false; H.session++; H.stream = null; ui.camStatus.textContent = 'Camera disconnected — leave and rejoin to restart it.'; };
+    s.getVideoTracks()[0].onended = () => { H.active = false; H.session++; H.stream = null; setTrack('Camera disconnected — tap Reinitialize to restart it.'); };
     ui.camera.srcObject = s; await ui.camera.play();
   }
-  ui.camera.classList.add('visible'); ui.camStatus.textContent = 'Camera ready · show your hand';
-  if (!mp) {
-    mp = new Hands({ locateFile: f => 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/' + f });
-    mp.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: .55, minTrackingConfidence: .5 });
-    mp.onResults(onHandResults);
-  }
-  H.active = true; H.session++; pump(H.session); return true;
+  ui.camera.classList.add('visible'); setTrack('Loading hand tracker…');
+  try { await ensureMP(); } catch (e) { throw new Error('Hand tracker failed to load. Tap ↻ to retry.'); }
+  if (ep !== G.epoch) return false;
+  H.autoCount = 0; startTracking(); setTrack('Show your hand to the camera'); return true;
 }
 function pump(s) {
-  if (!H.active || s !== H.session) return;
+  if (!H.active || s !== H.session || !mp) return;
   const v = ui.camera, rvfc = 'requestVideoFrameCallback' in v;
   const next = () => rvfc ? v.requestVideoFrameCallback(() => pump(s)) : requestAnimationFrame(() => pump(s));
   if (v.readyState < 2 || (!rvfc && v.currentTime === H.lastT)) { next(); return; }
   H.lastT = v.currentTime; H.rs = s;
-  mp.send({ image: v }).catch(e => console.warn('tracking', e)).finally(next); // single in-flight inference, next frame only after it ends
+  mp.send({ image: v }).catch(e => console.warn('tracking', e)).finally(next);
 }
 function stopCamera() {
   H.active = false; H.session++; H.list = [];
@@ -323,7 +481,7 @@ const sub = (a, b) => [a.x - b.x, a.y - b.y, (a.z || 0) - (b.z || 0)];
 const len = v => Math.hypot(v[0], v[1], v[2]) || 1e-6;
 const cosA = (u, v) => (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / (len(u) * len(v));
 const ext = (lm, m, p, t) => cosA(sub(lm[p], lm[m]), sub(lm[t], lm[p])) > .6 && len(sub(lm[t], lm[0])) > len(sub(lm[p], lm[0]));
-function classify(lm) { // joint-angle based, so it is rotation tolerant
+function classify(lm) {
   const f = [ext(lm, 5, 6, 8), ext(lm, 9, 10, 12), ext(lm, 13, 14, 16), ext(lm, 17, 18, 20)], n = f.filter(Boolean).length;
   if (n >= 3) return 'open';
   if (n === 0 || (n === 1 && !f[0])) return 'fist';
@@ -331,10 +489,11 @@ function classify(lm) { // joint-angle based, so it is rotation tolerant
   return 'partial';
 }
 function onHandResults(res) {
-  if (!H.active || H.rs !== H.session) return; // stale inference
+  if (!H.active || H.rs !== H.session) return;
   const now = performance.now(), seen = new Set();
+  H.lastResultAt = now; H.autoCount = 0;
   (res.multiHandLandmarks || []).forEach(lm => {
-    const rx = 1 - lm[8].x, ry = lm[8].y;
+    const rx = 1 - lm[9].x, ry = lm[9].y, tx = 1 - lm[8].x, ty = lm[8].y; // palm centre drives gameplay, fingertip draws ink
     let best = null, bd = .3;
     for (const h of H.list) { if (seen.has(h)) continue; const d = Math.hypot(h.rx - rx, h.ry - ry); if (d < bd) { bd = d; best = h; } }
     if (!best) { best = { id: H.nextId++, x: rx, y: ry, rx, ry, t: now, hist: [], trail: [], g: 'none', raw: 'none', cnt: 0, vx: 0, vy: 0 }; H.list.push(best); }
@@ -344,45 +503,66 @@ function onHandResults(res) {
     best.x += (rx - best.x) * a; best.y += (ry - best.y) * a; best.rx = rx; best.ry = ry; best.t = now; best.lm = lm;
     best.hist.push({ t: now, x: rx, y: ry }); while (best.hist.length > 1 && now - best.hist[0].t > 200) best.hist.shift();
     const f = best.hist[0], l = best.hist[best.hist.length - 1], span = (l.t - f.t) / 1000;
-    best.vx = span > .02 ? (l.x - f.x) / span : 0; best.vy = span > .02 ? (l.y - f.y) / span : 0; // units per second
+    best.vx = span > .02 ? (l.x - f.x) / span : 0; best.vy = span > .02 ? (l.y - f.y) / span : 0;
     const raw = classify(lm);
     if (raw === best.raw) best.cnt++; else { best.raw = raw; best.cnt = 1; }
-    if (best.cnt >= 2) best.g = raw; // short debounce
+    if (best.cnt >= 2) best.g = raw;
     if (jump > .3) best.trail = [];
-    best.trail.push({ x: best.x, y: best.y, t: now });
+    best.trail.push({ x: tx, y: ty, t: now }); if (best.trail.length > 90) best.trail.shift();
   });
   H.list = H.list.filter(h => seen.has(h) || now - h.t < 350);
-  ui.camStatus.textContent = seen.size ? 'Hand detected · ' + seen.size : 'Show your hand to the camera';
+  if (!G.tut) ui.camStatus.textContent = seen.size ? 'Hand detected · ' + seen.size : 'Show your hand to the camera';
+  else setTrack(seen.size ? 'Hand detected ✓' : 'Show your hand to the camera');
 }
 function primaryHand(now) {
   let b = null;
   for (const h of H.list) if (now - h.t < 250 && (!b || h.t > b.t)) b = h;
-  return b ? { x: b.x, y: b.y, vx: b.vx, vy: b.vy, g: b.g, at: now } : null;
+  return b ? { x: b.x, y: b.y, vx: b.vx, vy: b.vy, g: b.g, lm: b.lm, at: now } : null;
+}
+const flatLm = lm => { const f = []; for (const p of lm) f.push(r3(p.x), r3(p.y)); return f; };
+const cleanLm = a => (Array.isArray(a) && a.length === 42 && a.every(v => typeof v === 'number' && isFinite(v))) ? a.map(v => num(v, 0, -1, 2)) : null;
+
+/* ink-bleed trail: soft blobs that spread and fade like wet ink */
+const blob = document.createElement('canvas'); blob.width = blob.height = 64;
+{ const g = blob.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, 'rgba(46,58,205,.95)'); r.addColorStop(.45, 'rgba(70,92,235,.38)'); r.addColorStop(1, 'rgba(90,125,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); }
+function ink(hd, now, w, h) {
+  const T = hd.trail, LIFE = 950;
+  for (let i = 1; i < T.length; i++) {
+    const a = T[i - 1], b = T[i], age = (now - b.t) / LIFE; if (age >= 1) continue;
+    const x0 = a.x * w, y0 = a.y * h, dx = b.x * w - x0, dy = b.y * h - y0, n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 4));
+    const s = (7 + age * 17) * 2; cx.globalAlpha = Math.pow(1 - age, 1.4) * .55; // bigger + fainter with age = bleed
+    for (let k = 0; k < n; k++) { const f = k / n; cx.drawImage(blob, x0 + dx * f - s / 2, y0 + dy * f - s / 2, s, s); }
+  }
+  cx.globalAlpha = 1; cx.lineWidth = 2.5; // thin dark wet core on the freshest part
+  for (let i = 1; i < T.length; i++) {
+    const age = (now - T[i].t) / LIFE; if (age > .35) continue;
+    cx.strokeStyle = 'rgba(25,32,130,' + (1 - age / .35) * .8 + ')';
+    cx.beginPath(); cx.moveTo(T[i - 1].x * w, T[i - 1].y * h); cx.lineTo(T[i].x * w, T[i].y * h); cx.stroke();
+  }
+}
+function skeleton(f, w, h, col, dash) { // f = flat [x0,y0,x1,y1,...] in camera space; mirrored like the preview
+  cx.strokeStyle = col; cx.lineWidth = 3; cx.shadowBlur = 10; cx.shadowColor = col; cx.setLineDash(dash || []);
+  cx.beginPath();
+  for (const [a, b] of CONN) { cx.moveTo((1 - f[a * 2]) * w, f[a * 2 + 1] * h); cx.lineTo((1 - f[b * 2]) * w, f[b * 2 + 1] * h); }
+  cx.stroke(); cx.setLineDash([]); cx.fillStyle = '#fff';
+  for (let i = 0; i < 21; i++) { cx.beginPath(); cx.arc((1 - f[i * 2]) * w, f[i * 2 + 1] * h, 3, 0, 6.283); cx.fill(); }
+  cx.shadowBlur = 0;
 }
 function drawOverlay(now) {
   const w = ui.handLayer.width, h = ui.handLayer.height;
   cx.clearRect(0, 0, w, h); cx.lineCap = 'round'; cx.lineJoin = 'round';
   for (const hd of H.list) {
-    hd.trail = hd.trail.filter(p => now - p.t < 600);
-    for (let i = 1; i < hd.trail.length; i++) {
-      const a = hd.trail[i - 1], b = hd.trail[i], al = (1 - (now - b.t) / 600) * .5;
-      cx.strokeStyle = 'rgba(60,190,230,' + al + ')'; cx.lineWidth = 2 + al * 6;
-      cx.beginPath(); cx.moveTo(a.x * w, a.y * h); cx.lineTo(b.x * w, b.y * h); cx.stroke();
-    }
+    hd.trail = hd.trail.filter(p => now - p.t < 950); ink(hd, now, w, h);
     if (now - hd.t > 250 || !hd.lm) continue;
     const col = hd.g === 'fist' ? '#6473ff' : hd.g === 'open' ? '#25bcd8' : '#43c5a0';
-    cx.strokeStyle = col; cx.lineWidth = 3; cx.shadowBlur = 10; cx.shadowColor = col;
-    cx.beginPath();
-    for (const [a, b] of CONN) { const p = hd.lm[a], q = hd.lm[b]; cx.moveTo((1 - p.x) * w, p.y * h); cx.lineTo((1 - q.x) * w, q.y * h); }
-    cx.stroke(); cx.fillStyle = '#fff';
-    for (const p of hd.lm) { cx.beginPath(); cx.arc((1 - p.x) * w, p.y * h, 3, 0, 6.283); cx.fill(); }
-    cx.shadowBlur = 0; cx.lineWidth = 2;
-    cx.beginPath(); cx.arc(hd.x * w, hd.y * h, hd.g === 'open' ? 26 : 18, 0, 6.283); cx.stroke();
+    skeleton(flatLm(hd.lm), w, h, col);
+    cx.strokeStyle = col; cx.lineWidth = 2; cx.beginPath(); cx.arc(hd.x * w, hd.y * h, hd.g === 'open' ? 26 : 18, 0, 6.283); cx.stroke();
   }
-  const rh = G.remoteHand;
-  if (G.mode === 'online' && rh && now - rh.at < 500) { // opponent's hand
-    cx.strokeStyle = '#ff5fb5'; cx.setLineDash([6, 5]); cx.lineWidth = 3;
-    cx.beginPath(); cx.arc(rh.x * w, rh.y * h, rh.g === 'open' ? 26 : 18, 0, 6.283); cx.stroke(); cx.setLineDash([]);
+  const rh = G.remoteHand; // opponent's hand, drawn in the shared play field
+  if (G.mode === 'online' && rh && now - rh.at < 500) {
+    if (rh.lm) skeleton(rh.lm, w, h, '#ff5fb5', [6, 4]);
+    cx.strokeStyle = '#ff5fb5'; cx.lineWidth = 2; cx.setLineDash([6, 5]); cx.beginPath(); cx.arc(rh.x * w, rh.y * h, rh.g === 'open' ? 26 : 18, 0, 6.283); cx.stroke(); cx.setLineDash([]);
   }
 }
 
@@ -413,10 +593,8 @@ function simulate(dt, now) {
   P[0].hand = primaryHand(now);
   if (online && P[1].hand && now - P[1].hand.at > 400) P[1].hand = null;
   G.remoteHand = online ? P[1].hand : null;
-
   if (now - G.spawnAt > 1500 - 700 * prog && G.orbs.length < 6 + Math.round(prog * 4)) { G.spawnAt = now; spawn(); }
-
-  for (const o of G.orbs.slice()) { // single movement step per frame
+  for (const o of G.orbs.slice()) {
     if (o.pw && o.held < 0 && now - o.born > 9000) { removeOrb(o); continue; }
     o.z = Math.min(0, o.z + dt * 7);
     if (o.held >= 0) continue;
@@ -426,15 +604,11 @@ function simulate(dt, now) {
     if (o.y < .1 || o.y > .9) { o.vy *= -.85; o.y = Math.min(.9, Math.max(.1, o.y)); }
     const d = Math.exp(-dt * (o.by >= 0 ? .4 : .05)); o.vx *= d; o.vy *= d;
   }
-
   for (let i = 0; i < (online ? 2 : 1); i++) {
     const p = P[i], h = p.hand, a = asp();
     if (p.held) {
-      if (!h) { release(p); }
-      else {
-        p.held.x = h.x; p.held.y = h.y; p.held.vx = p.held.vy = 0;
-        if (h.g === 'fist' && p.lastG !== 'fist') throwOrb(i, h, now);
-      }
+      if (!h) release(p);
+      else { p.held.x = h.x; p.held.y = h.y; p.held.vx = p.held.vy = 0; if (h.g === 'fist' && p.lastG !== 'fist') throwOrb(i, h, now); }
     } else if (h && h.g === 'open') {
       let best = null, bd = 1;
       for (const o of G.orbs) {
@@ -443,14 +617,13 @@ function simulate(dt, now) {
         if (d < (o.pw ? .14 : .12) && d < bd) { bd = d; best = o; }
       }
       if (best) {
-        if (best.pw) { collect(i, best, now); }
+        if (best.pw) collect(i, best, now);
         else { p.held = best; best.held = i; best.by = -1; p.score += 2; ev('catch', best.x, best.y, i, 'CAUGHT · MAKE A FIST TO THROW'); }
       }
     }
     p.lastG = h ? h.g : 'none';
   }
-
-  for (const o of G.orbs.slice()) { // goal ring
+  for (const o of G.orbs.slice()) {
     if (o.by < 0 || o.held >= 0) continue;
     if (Math.hypot((o.x - G.goal.x) * asp(), o.y - G.goal.y) < GOAL_R) {
       const p = P[o.by], pts = 10 * p.combo * (now < p.doubleUntil ? 2 : 1);
@@ -458,11 +631,10 @@ function simulate(dt, now) {
       ev('goal', o.x, o.y, o.by, 'RING HIT +' + pts); removeOrb(o); moveGoal();
     }
   }
-
   if (online && now - G.lastSend > 66) {
-    G.lastSend = now;
+    G.lastSend = now; const h0 = P[0].hand;
     send({ type: 'state', mid: G.mid, seq: ++G.seq, t: r3(G.timeLeft), s: [P[0].score, P[1].score], c: [P[0].combo, P[1].combo],
-      g: [r3(G.goal.x), r3(G.goal.y)], h: P[0].hand ? { x: r3(P[0].hand.x), y: r3(P[0].hand.y), g: P[0].hand.g } : null,
+      g: [r3(G.goal.x), r3(G.goal.y)], h: h0 ? { x: r3(h0.x), y: r3(h0.y), g: h0.g, lm: h0.lm ? flatLm(h0.lm) : null } : null,
       o: G.orbs.map(o => [o.id, r3(o.x), r3(o.y), r3(o.vx), r3(o.vy), o.col, o.held, o.pw]), ev: G.evq.splice(0, 20) });
   }
 }
@@ -478,7 +650,7 @@ function throwOrb(i, h, now) {
   const gx = (g.x - o.x) * a, gy = g.y - o.y, gl = Math.hypot(gx, gy) || 1, tg = [gx / gl / a, gy / gl];
   const m = Math.hypot(h.vx, h.vy);
   let dx = tg[0], dy = tg[1];
-  if (m > .15) { dx = h.vx / m * .6 + tg[0] * .4; dy = h.vy / m * .6 + tg[1] * .4; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l; } // gentle aim assist
+  if (m > .15) { dx = h.vx / m * .6 + tg[0] * .4; dy = h.vy / m * .6 + tg[1] * .4; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l; }
   const sp = Math.min(1.8, Math.max(.8, m * 1.1));
   o.vx = dx * sp; o.vy = dy * sp; o.held = -1; o.by = i; o.tAt = now; p.held = null;
   ev('throw', o.x, o.y, i, '');
@@ -490,16 +662,13 @@ function endMatch() {
   showResult();
 }
 function showResult() {
-  G.phase = 'ended'; ui.hud.style.display = 'none'; ui.bottomBar.style.display = 'none'; ui.centerMessage.style.display = 'none';
-  const me = meIdx(), a = G.P[me].score, b = G.P[1 - me].score;
-  if (G.mode === 'solo') {
-    $('resultTitle').textContent = a >= SOLO_TARGET ? 'TARGET REACHED' : 'TRY AGAIN';
-    $('resultDescription').textContent = 'Your score: ' + a + ' · Target: ' + SOLO_TARGET;
-  } else {
-    $('resultTitle').textContent = a > b ? 'VICTORY' : a < b ? 'DEFEAT' : 'DRAW';
-    $('resultDescription').textContent = 'You: ' + a + ' · ' + net.remote + ': ' + b;
-  }
-  $('resultScore').textContent = String(a).padStart(3, '0'); showScreen(ui.resultScreen); setBadge('MATCH COMPLETE');
+  G.phase = 'ended'; ui.hud.style.display = 'none'; ui.bottomBar.style.display = 'none'; ui.centerMessage.style.display = 'none'; ui.app.classList.remove('idle');
+  const me = meIdx(), a = G.P[me].score, b = G.P[1 - me].score; let label, res;
+  if (G.mode === 'solo') { res = a >= SOLO_TARGET ? 'win' : 'loss'; label = a >= SOLO_TARGET ? 'TARGET REACHED' : 'TRY AGAIN'; $('resultDescription').textContent = 'Your score: ' + a + ' · Target: ' + SOLO_TARGET; }
+  else { res = a > b ? 'win' : a < b ? 'loss' : 'draw'; label = a > b ? 'VICTORY' : a < b ? 'DEFEAT' : 'DRAW'; $('resultDescription').textContent = 'You: ' + a + ' · ' + net.remote + ': ' + b; }
+  $('resultTitle').textContent = label; $('resultScore').textContent = String(a).padStart(3, '0');
+  if (!G.saved) { G.saved = true; saveMatch({ ts: Date.now(), mode: G.mode, me: a, them: b, opp: net.remote, target: SOLO_TARGET, res, label }); }
+  showScreen(ui.resultScreen); setBadge('MATCH COMPLETE');
 }
 
 /* ---------- Guest (snapshot follower) ---------- */
@@ -510,7 +679,7 @@ function applyState(m) {
   if (Array.isArray(m.s)) { G.P[0].score = num(m.s[0], 0, 0, 1e6); G.P[1].score = num(m.s[1], 0, 0, 1e6); }
   if (Array.isArray(m.c)) { G.P[0].combo = num(m.c[0], 1, 1, 8); G.P[1].combo = num(m.c[1], 1, 1, 8); }
   if (Array.isArray(m.g)) G.goal = { x: num(m.g[0], .5, 0, 1), y: num(m.g[1], .3, 0, 1) };
-  G.remoteHand = m.h && GESTURES.includes(m.h.g) ? { x: num(m.h.x, .5, 0, 1), y: num(m.h.y, .5, 0, 1), g: m.h.g, at: performance.now() } : null;
+  G.remoteHand = m.h && GESTURES.includes(m.h.g) ? { x: num(m.h.x, .5, 0, 1), y: num(m.h.y, .5, 0, 1), g: m.h.g, lm: cleanLm(m.h.lm), at: performance.now() } : null;
   const seen = new Set();
   for (const a of m.o.slice(0, 40)) {
     if (!Array.isArray(a)) continue;
@@ -533,9 +702,9 @@ function guestStep(dt, now) {
   }
   if (now - G.lastHandSend > 50) {
     G.lastHandSend = now; const h = primaryHand(now);
-    send({ type: 'hand', mid: G.mid, h: h ? { x: r3(h.x), y: r3(h.y), vx: r3(h.vx), vy: r3(h.vy), g: h.g } : null });
+    send({ type: 'hand', mid: G.mid, h: h ? { x: r3(h.x), y: r3(h.y), vx: r3(h.vx), vy: r3(h.vy), g: h.g, lm: h.lm ? flatLm(h.lm) : null } : null });
   }
-  if (G.timeLeft < -3) showResult(); // host never confirmed the end
+  if (G.timeLeft < -3) showResult();
 }
 
 /* ---------- Main loop ---------- */
@@ -543,7 +712,11 @@ let last = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now;
-  if (G.phase === 'idle' || !renderer) { // idle menu: no rendering work
+  watchdog(now);
+  const idle = G.phase === 'playing' && now - lastTouch > IDLE_MS; // only touches wake the UI, not air movement
+  if (idle !== G.idleOn) { G.idleOn = idle; ui.app.classList.toggle('idle', idle); }
+  if (G.tut) { G.cleared = false; tutStep(); drawOverlay(now); return; }
+  if (G.phase === 'idle' || !renderer) {
     if (!G.cleared && renderer) { cx.clearRect(0, 0, ui.handLayer.width, ui.handLayer.height); renderer.clear(); G.cleared = true; }
     return;
   }
@@ -575,23 +748,36 @@ function render(now, dt) {
   renderer.render(scene, cam);
 }
 
-/* ---------- Networking ---------- */
+/* ---------- Networking + video call ---------- */
+const ICE = { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }] } };
 const cleanName = n => (String(n || 'Player').trim().replace(/[<>]/g, '').slice(0, 16)) || 'Player';
 function send(o) { if (net.conn && net.ok) { try { net.conn.send(o); } catch (e) { console.warn('send', e); } } }
+function showPip(on) { ui.pip.style.display = on ? 'block' : 'none'; if (!on) ui.remoteVideo.srcObject = null; ui.pipName.textContent = net.remote.toUpperCase(); }
+function wireCall(c) {
+  net.calls.push(c);
+  c.on('stream', s => { ui.remoteVideo.srcObject = s; ui.remoteVideo.play().catch(() => {}); showPip(true); });
+  c.on('close', () => { net.calls = net.calls.filter(x => x !== c); if (!net.calls.length) showPip(false); });
+  c.on('error', e => console.warn('call', e));
+}
+function callPeer() { // send our camera to the friend (they answer with theirs, if running)
+  if (!net.peer || !net.conn || !net.ok || !H.stream) return;
+  try { wireCall(net.peer.call(net.conn.peer, H.stream)); } catch (e) { console.warn('call failed', e); }
+}
+function onPeerCall(c) { try { c.answer(H.stream || undefined); } catch (_) {} wireCall(c); }
 function destroyNet() {
   net.closing = true; clearTimeout(net.joinT);
+  net.calls.forEach(c => { try { c.close(); } catch (_) {} }); net.calls = []; showPip(false);
   try { net.conn && net.conn.close(); } catch (_) {}
   try { net.peer && net.peer.destroy(); } catch (_) {}
   net.conn = null; net.peer = null; net.ok = false; net.isHost = false; net.code = ''; net.lReady = net.rReady = false;
   net.closing = false; ui.hostBtn.disabled = false; ui.joinBtn.disabled = false;
 }
 function onDisconnect() {
-  net.ok = false; net.lReady = net.rReady = false; setBadge('DISCONNECTED'); toast('Opponent disconnected', 2500);
+  net.ok = false; net.lReady = net.rReady = false; setBadge('DISCONNECTED'); toast('Opponent disconnected', 2500); showPip(false);
   if (G.phase !== 'idle') resetSession();
   ui.lobbyDescription.textContent = 'Connection lost.'; setLobbyStatus('Opponent disconnected. Leave and create or join a new room.');
   renderReady(); showScreen(ui.waitingScreen);
 }
-const setLobbyStatus = t => ui.lobbyStatus.textContent = t || '';
 function setupConn(c) {
   net.conn = c;
   c.on('open', () => {
@@ -603,22 +789,22 @@ function setupConn(c) {
   });
   c.on('data', m => { if (c === net.conn && m && typeof m === 'object' && typeof m.type === 'string') handlePacket(m); });
   c.on('close', () => { if (c === net.conn && !net.closing) onDisconnect(); });
-  c.on('error', e => { console.warn(e); if (c === net.conn) $('statusText').textContent = 'Connection error. Check the code and try again.'; });
+  c.on('error', e => { console.warn(e); if (c === net.conn) ui.statusText.textContent = 'Connection error. Check the code and try again.'; });
 }
 function handlePacket(m) {
   switch (m.type) {
     case 'hello':
-      net.remote = cleanName(m.name); ui.lobbyDescription.textContent = 'You: ' + net.name + ' · Opponent: ' + net.remote;
+      net.remote = cleanName(m.name); ui.lobbyDescription.textContent = 'You: ' + net.name + ' · Opponent: ' + net.remote; ui.pipName.textContent = net.remote.toUpperCase();
       if (!m.ack) send({ type: 'hello', name: net.name, ack: true });
       break;
-    case 'ready':
-      net.rReady = !!m.r; setLobbyStatus(net.rReady ? net.remote + ' is ready.' : ''); maybeStart(); break;
+    case 'ready': net.rReady = !!m.r; setLobbyStatus(net.rReady ? net.remote + ' is ready.' : ''); maybeStart(); break;
     case 'start':
       if (net.isHost || G.phase !== 'idle' || !net.lReady) break;
       net.lReady = net.rReady = false; renderReady(); G.mode = 'online'; beginMatch(num(m.mid, 1, 0, 1e9)); break;
     case 'hand':
       if (net.isHost && m.mid === G.mid && G.phase === 'playing') {
-        const h = m.h; G.P[1].hand = h && GESTURES.includes(h.g) ? { x: num(h.x, .5, 0, 1), y: num(h.y, .5, 0, 1), vx: num(h.vx, 0, -6, 6), vy: num(h.vy, 0, -6, 6), g: h.g, at: performance.now() } : null;
+        const h = m.h;
+        G.P[1].hand = h && GESTURES.includes(h.g) ? { x: num(h.x, .5, 0, 1), y: num(h.y, .5, 0, 1), vx: num(h.vx, 0, -6, 6), vy: num(h.vy, 0, -6, 6), g: h.g, lm: cleanLm(h.lm), at: performance.now() } : null;
       } break;
     case 'state': if (!net.isHost) applyState(m); break;
     case 'end':
@@ -640,12 +826,13 @@ function createRoom() {
   if (!window.Peer) { ui.statusText.textContent = 'PeerJS did not load. Check your connection.'; return; }
   net.isHost = true; net.name = cleanName($('playerName').value); net.code = makeCode();
   ui.hostBtn.disabled = ui.joinBtn.disabled = true; ui.statusText.textContent = 'Creating room…';
-  net.peer = new Peer(net.code + '_hog');
+  net.peer = new Peer(net.code + '_hog', ICE);
   net.peer.on('open', () => {
     ui.hostBtn.disabled = ui.joinBtn.disabled = false; ui.hostRoomArea.classList.remove('hidden');
     ui.roomCodeDisplay.textContent = net.code; ui.statusText.textContent = 'Room ready. Share the code with your friend.'; setBadge('ROOM READY');
   });
   net.peer.on('connection', c => { if (net.conn) { c.close(); return; } setupConn(c); });
+  net.peer.on('call', onPeerCall);
   net.peer.on('error', e => {
     ui.hostBtn.disabled = ui.joinBtn.disabled = false;
     ui.statusText.textContent = e.type === 'unavailable-id' ? 'Room code collision. Tap Create Room again.' : 'Unable to create room: ' + (e.type || 'network error');
@@ -659,23 +846,45 @@ function joinRoom() {
   if (net.code.length !== 6) { ui.statusText.textContent = 'Enter the complete six-character room code.'; return; }
   ui.hostBtn.disabled = ui.joinBtn.disabled = true; ui.statusText.textContent = 'Connecting to room ' + net.code + '…';
   const code = net.code;
-  net.peer = new Peer();
+  net.peer = new Peer(ICE);
   net.peer.on('open', () => setupConn(net.peer.connect(code + '_hog', { reliable: true, serialization: 'json' })));
+  net.peer.on('call', onPeerCall);
   net.peer.on('error', () => { destroyNet(); ui.statusText.textContent = 'Connection failed. Check the code and try again.'; });
   net.joinT = setTimeout(() => { if (!net.ok) { destroyNet(); ui.statusText.textContent = 'Connection timed out. Check the code and try again.'; } }, 10000);
 }
 
 /* ---------- Events ---------- */
-$('soloBtn').onclick = () => { ui.homeStatus.textContent = ''; startSolo(); };
-$('onlineBtn').onclick = () => { showScreen(ui.onlineScreen); ui.hostRoomArea.classList.add('hidden'); ui.statusText.textContent = 'Online play needs an internet connection.'; };
+['pointerdown', 'touchstart', 'keydown'].forEach(t => addEventListener(t, () => { lastTouch = performance.now(); }, { passive: true }));
+$('fsBtn').onclick = toggleFS;
+$('soloBtn').onclick = () => { ui.homeStatus.textContent = ''; tryFS(); if (!tutDone()) openTutorial(startSolo, true); else startSolo(); };
+$('onlineBtn').onclick = () => {
+  tryFS(); const go = () => { showScreen(ui.onlineScreen); ui.hostRoomArea.classList.add('hidden'); ui.statusText.textContent = 'Online play needs an internet connection.'; };
+  if (!tutDone()) openTutorial(go, false); else go();
+};
+$('tutBtn').onclick = () => { tryFS(); openTutorial(null, false); };
+$('historyBtn').onclick = () => { renderHistory(); showScreen(ui.historyScreen); };
+$('resultHistBtn').onclick = () => { renderHistory(); showScreen(ui.historyScreen); };
+$('histBackBtn').onclick = () => showScreen(G.phase === 'ended' ? ui.resultScreen : ui.homeScreen);
+$('clearHistBtn').onclick = () => { if (confirm('Delete all saved matches?')) { try { localStorage.removeItem(HK); } catch (_) {} renderHistory(); } };
+ui.reinitBtn.onclick = reinit;
+$('trackBtn').onclick = reinit;
+ui.tutDoneBtn.onclick = finishTutorial;
+ui.offlineBtn.onclick = async () => {
+  ui.offlineBtn.disabled = true;
+  try {
+    await mpCacheDownload(n => setTrack('Saving tracker ' + n + '/' + MP_FILES.length + '…'));
+    ui.offlineBtn.textContent = '✓ TRACKER SAVED ON DEVICE'; setTrack('Saved. Tap Reinitialize to start using the local copy.');
+  } catch (e) { setTrack('Could not save: ' + (e.message || e)); ui.offlineBtn.disabled = false; }
+};
 $('backHomeBtn').onclick = () => { destroyNet(); showScreen(ui.homeScreen); };
 ui.hostBtn.onclick = createRoom; ui.joinBtn.onclick = joinRoom;
 $('copyCodeBtn').onclick = async () => { try { await navigator.clipboard.writeText(net.code); toast('ROOM CODE COPIED'); } catch (_) { toast('Room code: ' + net.code, 2500); } };
 ui.readyBtn.onclick = async () => {
   if (!net.ok || net.lReady) return;
-  setLobbyStatus('Starting camera…');
+  tryFS(); setLobbyStatus('Starting camera…');
   try { if (!await startCamera(G.epoch)) return; } catch (e) { setLobbyStatus(e.message || 'Camera unavailable.'); return; }
   if (!net.ok) return;
+  callPeer();
   net.lReady = true; renderReady(); setLobbyStatus('You are ready. Waiting for ' + net.remote + '.');
   send({ type: 'ready', r: true }); maybeStart();
 };
@@ -692,13 +901,15 @@ $('joinCode').oninput = e => { e.target.value = e.target.value.toUpperCase().rep
 addEventListener('resize', resize);
 addEventListener('beforeunload', () => { try { send({ type: 'leave' }); stopCamera(); destroyNet(); } catch (_) {} });
 
-/* ---------- Boot: validate dependencies ---------- */
+/* ---------- Boot ---------- */
 if (!window.THREE) {
   ui.homeStatus.textContent = 'Three.js failed to load. Check your connection and reload.';
-  $('soloBtn').disabled = $('onlineBtn').disabled = true;
+  $('soloBtn').disabled = $('onlineBtn').disabled = $('tutBtn').disabled = true;
 } else {
-  if (!window.Hands) ui.homeStatus.textContent = 'Hand tracking library failed to load. Reload to retry.';
   initThree(); renderReady(); requestAnimationFrame(frame);
+  if (!window.Hands) ui.homeStatus.textContent = 'Hand tracking library failed to load. Reload to retry.';
+  else mpCacheLoad().then(ok => { if (ok) { ui.offlineBtn.textContent = '✓ TRACKER SAVED ON DEVICE'; ui.offlineBtn.disabled = true; } }).catch(() => {})
+    .finally(() => ensureMP().catch(e => console.warn('warm-up failed', e))); // pre-warm tracker while the user reads the menu
 }
 })();
 </script>
