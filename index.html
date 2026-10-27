@@ -1,624 +1,2167 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>HAND OF GOD</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-    <style>
-        :root {
-            --bg: #000000;
-            --panel: #0a0a0a;
-            --border: #2a2a2a;
-            --text: #ffffff;
-            --grey: #777777;
-            --gold: #FFD700;
-            --red: #ff0033;
-            --blue: #00aaff;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
-        html, body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', sans-serif; overflow: hidden; touch-action: none; width: 100%; height: 100%; position: fixed; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#edf3ff">
+<title>The Hand of God</title>
 
-        .clip-corner { clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); }
+<style>
+:root {
+  --ink: #17233d;
+  --muted: #68758c;
+  --blue: #5d72ff;
+  --cyan: #39d9ed;
+  --glass: rgba(255,255,255,.76);
+  --line: rgba(72,93,143,.18);
+}
 
-        #game-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; display: block; }
-        #hand-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10; pointer-events: none; }
-        #cam-video { position: fixed; bottom: -100%; right: -100%; width: 1px; height: 1px; opacity: 0; z-index: -1; }
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
 
-        #ui-layer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 50; pointer-events: none; }
-        #ui-layer > * { pointer-events: auto; }
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #eaf0ff;
+  color: var(--ink);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overscroll-behavior: none;
+}
 
-        /* MAIN MENU */
-        #menu-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); 
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 200; padding: 32px;
-            transition: opacity 0.5s ease;
-        }
-        #menu-overlay.hidden { opacity: 0; pointer-events: none; }
-        .menu-content { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 16px; }
-        .menu-title { font-size: 56px; font-weight: 700; text-transform: uppercase; letter-spacing: 4px; line-height: 0.9; text-align: center; margin-bottom: 8px; color: var(--text); }
-        .menu-title span { color: var(--gold); display: block; font-size: 24px; letter-spacing: 8px; margin-top: 4px; }
-        .menu-subtitle { font-size: 11px; color: var(--grey); text-transform: uppercase; letter-spacing: 3px; margin-bottom: 32px; font-family: 'JetBrains Mono', monospace; text-align: center; }
-        
-        .menu-btn { display: flex; align-items: center; justify-content: center; gap: 12px; background: #000000; color: #ffffff; border: 1px solid var(--border); padding: 18px 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; font-size: 14px; cursor: pointer; width: 100%; transition: background 0.2s, border-color 0.2s; }
-        .menu-btn:hover { border-color: var(--text); }
-        .menu-btn:active { background: #222; }
-        .menu-btn.primary { border-color: var(--gold); color: var(--gold); }
-        .menu-btn.secondary { border-color: var(--blue); color: var(--blue); }
-        
-        .menu-panel { background: #050505; border: 1px solid var(--border); padding: 16px; margin-top: 8px; width: 100%; display: none; }
-        .menu-panel.active { display: block; }
-        .menu-input { width: 100%; background: #111; border: 1px solid var(--border); color: var(--text); padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 16px; text-align: center; margin-bottom: 12px; letter-spacing: 2px; text-transform: uppercase; }
-        .menu-input:focus { outline: none; border-color: var(--text); }
-        
-        .code-display { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px; }
-        .copy-btn { background: var(--border); color: var(--text); border: none; padding: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .copy-btn:active { background: var(--grey); }
-        .host-status { font-size: 10px; color: var(--grey); margin-top: 8px; text-transform: uppercase; text-align: center; font-family: 'JetBrains Mono', monospace; }
-        
-        .menu-back { font-size: 10px; color: var(--grey); text-transform: uppercase; letter-spacing: 2px; cursor: pointer; text-align: center; margin-top: 16px; font-family: 'JetBrains Mono', monospace; text-decoration: underline; }
+button, input {
+  font: inherit;
+}
 
-        /* HUD */
-        .hud-panel { position: absolute; background: rgba(0,0,0,0.75); border: 1px solid var(--border); padding: 12px 16px; backdrop-filter: blur(4px); display: none; }
-        .hud-panel.active { display: block; }
-        .hud-label { font-size: 9px; color: var(--grey); text-transform: uppercase; letter-spacing: 2px; font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; }
-        .hud-value { font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--text); line-height: 1; }
-        
-        #score-panel { top: 16px; left: 16px; }
-        #score-panel .hud-value { color: var(--gold); }
-        
-        #enemy-panel { top: 16px; right: 16px; text-align: right; }
-        #enemy-panel .hud-value { color: var(--red); }
+button {
+  cursor: pointer;
+}
 
-        #timer-panel { top: 16px; left: 50%; transform: translateX(-50%); text-align: center; }
-        #timer-panel .hud-value { font-size: 32px; }
+#app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 20% 15%, #ffffff 0%, transparent 45%),
+    radial-gradient(ellipse at 80% 80%, #cbd9ff 0%, transparent 48%),
+    linear-gradient(135deg, #edf5ff, #dce7ff);
+}
 
-        #combo-panel { bottom: 40px; left: 50%; transform: translateX(-50%); text-align: center; border-color: var(--blue); display: none; }
-        #combo-panel.active { display: block; animation: pulse 0.5s infinite alternate; }
-        #combo-panel .hud-value { color: var(--blue); font-size: 24px; }
-        @keyframes pulse { from { transform: translateX(-50%) scale(1); } to { transform: translateX(-50%) scale(1.05); } }
+#camera {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  opacity: 0;
+  transition: opacity .5s ease;
+}
 
-        /* COUNTDOWN */
-        #countdown-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 150; pointer-events: none; }
-        #countdown-text { font-size: 120px; font-weight: 700; color: var(--text); text-shadow: 0 0 20px rgba(255,255,255,0.5); opacity: 0; transition: opacity 0.2s; font-family: 'Space Grotesk', sans-serif; letter-spacing: 4px; }
+#camera.visible {
+  opacity: .72;
+}
 
-        .status-indicator { position: absolute; bottom: 16px; left: 16px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--grey); text-align: left; text-transform: uppercase; background: rgba(0,0,0,0.7); padding: 8px 12px; border: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
-        .status-dot { display: inline-block; width: 8px; height: 8px; background: var(--red); animation: blink 1s infinite; }
-        .status-dot.connected { background: var(--blue); animation: none; }
-        @keyframes blink { 50% { opacity: 0.3; } }
-    </style>
+#lightWash {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,.36);
+  pointer-events: none;
+}
+
+#threeLayer, #handLayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#threeLayer {
+  z-index: 2;
+}
+
+#handLayer {
+  z-index: 3;
+}
+
+#vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.42), transparent 24%, transparent 70%, rgba(255,255,255,.35));
+}
+
+#topbar {
+  position: absolute;
+  z-index: 10;
+  top: max(12px, env(safe-area-inset-top));
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.brand {
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255,255,255,.8);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 28px rgba(54,73,128,.08);
+}
+
+.brand strong {
+  display: block;
+  font-size: 12px;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+
+.brand span {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .08em;
+}
+
+#connectionBadge {
+  padding: 9px 12px;
+  background: rgba(255,255,255,.8);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  backdrop-filter: blur(12px);
+  white-space: nowrap;
+}
+
+#hud {
+  position: absolute;
+  z-index: 9;
+  top: 82px;
+  left: 12px;
+  right: 12px;
+  display: none;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 8px;
+  pointer-events: none;
+}
+
+.hudCard {
+  padding: 10px 12px;
+  min-width: 0;
+  background: rgba(255,255,255,.78);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 8px 25px rgba(49,68,120,.06);
+  backdrop-filter: blur(14px);
+}
+
+.hudLabel {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.hudValue {
+  margin-top: 3px;
+  font-size: clamp(17px, 4vw, 24px);
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+#scoreValue {
+  color: #5369fa;
+}
+
+#timerValue {
+  color: #182743;
+}
+
+#comboValue {
+  color: #009eac;
+}
+
+#centerMessage {
+  position: absolute;
+  z-index: 8;
+  top: 43%;
+  left: 50%;
+  width: min(90%, 380px);
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  text-shadow: 0 2px 18px rgba(255,255,255,.9);
+}
+
+#centerMessage .big {
+  font-size: clamp(34px, 8vw, 58px);
+  font-weight: 1000;
+  letter-spacing: -.055em;
+  line-height: .98;
+}
+
+#centerMessage .small {
+  margin-top: 12px;
+  color: #45536f;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+#toast {
+  position: absolute;
+  z-index: 15;
+  top: 145px;
+  left: 50%;
+  transform: translate(-50%, -10px);
+  padding: 10px 16px;
+  max-width: 90%;
+  border: 1px solid rgba(255,255,255,.8);
+  border-radius: 999px;
+  color: #24324d;
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 8px 30px rgba(35,50,90,.12);
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+  opacity: 0;
+  transition: opacity .2s, transform .2s;
+  pointer-events: none;
+}
+
+#toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+#bottomBar {
+  position: absolute;
+  z-index: 10;
+  left: 12px;
+  right: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  pointer-events: none;
+}
+
+#gestureHint {
+  max-width: 75%;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: rgba(255,255,255,.8);
+  backdrop-filter: blur(12px);
+  font-size: 11px;
+  line-height: 1.45;
+  color: #35425e;
+}
+
+#gestureState {
+  color: #5369fa;
+  font-weight: 900;
+}
+
+#exitBtn {
+  pointer-events: auto;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255,255,255,.88);
+  color: #26324b;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.screen {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+  background: rgba(237,243,255,.5);
+  backdrop-filter: blur(7px);
+}
+
+.panel {
+  width: min(100%, 440px);
+  padding: clamp(22px, 5vw, 34px);
+  border: 1px solid rgba(255,255,255,.95);
+  border-radius: 30px;
+  background: rgba(255,255,255,.86);
+  box-shadow: 0 24px 90px rgba(49,66,118,.17);
+  text-align: center;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #eef0ff;
+  color: #5969e8;
+  font-size: 9px;
+  font-weight: 1000;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.orb {
+  width: 86px;
+  height: 86px;
+  margin: 18px auto 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 28px;
+  color: white;
+  font-size: 39px;
+  font-weight: 1000;
+  background: linear-gradient(140deg, #8290ff, #42d9eb);
+  box-shadow: 0 14px 35px rgba(92,117,255,.28);
+  transform: rotate(-7deg);
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(33px, 8vw, 47px);
+  line-height: .99;
+  letter-spacing: -.06em;
+  font-weight: 1000;
+}
+
+.subtitle {
+  margin: 14px auto 22px;
+  max-width: 320px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.primaryBtn, .secondaryBtn, .smallBtn {
+  width: 100%;
+  min-height: 48px;
+  padding: 13px 16px;
+  border-radius: 15px;
+  border: 0;
+  font-weight: 900;
+  transition: transform .12s, opacity .12s;
+}
+
+.primaryBtn:active, .secondaryBtn:active, .smallBtn:active {
+  transform: scale(.98);
+}
+
+.primaryBtn {
+  color: white;
+  background: linear-gradient(110deg, #6476ff, #48cfe6);
+  box-shadow: 0 9px 24px rgba(93,113,255,.2);
+}
+
+.secondaryBtn {
+  margin-top: 10px;
+  color: #33415e;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.82);
+}
+
+.smallBtn {
+  min-height: 42px;
+  color: #5366ef;
+  border: 1px solid #dfe4ff;
+  background: #f3f5ff;
+  font-size: 12px;
+}
+
+.input {
+  width: 100%;
+  min-height: 48px;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border: 1px solid #dfe5f1;
+  border-radius: 14px;
+  outline: none;
+  color: var(--ink);
+  background: rgba(255,255,255,.95);
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.input:focus {
+  border-color: #8a9aff;
+  box-shadow: 0 0 0 3px rgba(105,123,255,.12);
+}
+
+.roomCode {
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px dashed #a8b4ff;
+  border-radius: 16px;
+  background: #f3f5ff;
+  color: #5267f2;
+  font-size: 29px;
+  font-weight: 1000;
+  letter-spacing: .24em;
+  user-select: all;
+}
+
+.instructions {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(239,243,255,.75);
+  text-align: left;
+}
+
+.instructionRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 9px 0;
+  color: #5b6780;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.instructionRow b {
+  min-width: 22px;
+  color: #5267f2;
+  font-size: 14px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#resultScreen {
+  z-index: 25;
+}
+
+.resultScore {
+  margin: 18px 0;
+  font-size: 55px;
+  font-weight: 1000;
+  letter-spacing: -.06em;
+  color: #586df8;
+}
+
+#statusText {
+  min-height: 18px;
+  margin: 10px 0;
+  color: #67738b;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+#camStatus {
+  position: absolute;
+  z-index: 12;
+  right: 12px;
+  bottom: 86px;
+  display: none;
+  max-width: 70%;
+  padding: 8px 11px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.84);
+  color: #4b5b76;
+  font-size: 10px;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+@media (max-height: 650px) {
+  .panel {
+    padding: 18px;
+  }
+  .orb {
+    width: 58px;
+    height: 58px;
+    margin: 8px auto 12px;
+    border-radius: 20px;
+    font-size: 28px;
+  }
+  .subtitle {
+    margin: 9px auto 14px;
+  }
+  .instructions {
+    margin-top: 12px;
+    padding: 10px;
+  }
+  .instructionRow {
+    margin: 5px 0;
+  }
+}
+</style>
 </head>
+
 <body>
-    <video id="cam-video" autoplay playsinline muted></video>
-    <canvas id="game-canvas"></canvas>
-    <canvas id="hand-overlay"></canvas>
+<div id="app">
+  <video id="camera" autoplay muted playsinline></video>
+  <div id="lightWash"></div>
+  <canvas id="threeLayer"></canvas>
+  <canvas id="handLayer"></canvas>
+  <div id="vignette"></div>
 
-    <div id="ui-layer">
-        <div id="score-panel" class="hud-panel clip-corner">
-            <div class="hud-label">YOUR SCORE</div>
-            <div class="hud-value" id="score-val">0</div>
-        </div>
-        <div id="timer-panel" class="hud-panel clip-corner">
-            <div class="hud-label">TIME</div>
-            <div class="hud-value" id="timer-val">3:00</div>
-        </div>
-        <div id="enemy-panel" class="hud-panel clip-corner">
-            <div class="hud-label">ENEMY</div>
-            <div class="hud-value" id="enemy-val">0</div>
-        </div>
-        <div id="combo-panel" class="hud-panel clip-corner">
-            <div class="hud-label">STREAK</div>
-            <div class="hud-value" id="combo-val">x1</div>
-        </div>
-
-        <div class="status-indicator clip-corner">
-            P2P<span class="status-dot" id="status-dot"></span>
-        </div>
-
-        <div id="countdown-overlay"><div id="countdown-text">3</div></div>
+  <header id="topbar">
+    <div class="brand">
+      <strong>The Hand of God</strong>
+      <span>YOUR HANDS. YOUR POWER.</span>
     </div>
+    <div id="connectionBadge">● STANDBY</div>
+  </header>
 
-    <!-- MAIN MENU -->
-    <div id="menu-overlay">
-        <div class="menu-content">
-            <div class="menu-title">HAND<span>OF GOD</span></div>
-            <div class="menu-subtitle">Divine Reflex Trial</div>
-            
-            <button class="menu-btn primary" id="btn-solo">
-                SOLO TRIAL (AI)
-            </button>
-            
-            <button class="menu-btn secondary" id="btn-host">
-                HOST DUEL
-            </button>
-            <div class="menu-panel clip-corner" id="host-container">
-                <div class="code-display">
-                    <div style="font-family:'JetBrains Mono', monospace; font-size:24px; letter-spacing:4px; color:var(--text);" id="room-display">------</div>
-                    <button class="copy-btn clip-corner" id="btn-copy">COPY</button>
-                </div>
-                <div class="host-status" id="host-status">Waiting for opponent...</div>
-            </div>
-
-            <button class="menu-btn secondary" id="btn-join">
-                JOIN DUEL
-            </button>
-            <div class="menu-panel clip-corner" id="join-container">
-                <input type="text" id="room-input" class="menu-input" maxlength="6" placeholder="ENTER CODE">
-                <button class="menu-btn" id="btn-connect" style="background:#fff; color:#000; border-color:#fff;">
-                    CONNECT
-                </button>
-            </div>
-
-            <div class="menu-back" id="btn-back" style="display:none;">BACK TO MENU</div>
-        </div>
+  <section id="hud">
+    <div class="hudCard">
+      <div class="hudLabel">Your score</div>
+      <div class="hudValue" id="scoreValue">000</div>
     </div>
+    <div class="hudCard">
+      <div class="hudLabel">Time left</div>
+      <div class="hudValue" id="timerValue">03:00</div>
+    </div>
+    <div class="hudCard">
+      <div class="hudLabel">Combo</div>
+      <div class="hudValue" id="comboValue">×1</div>
+    </div>
+  </section>
 
-    <script>
-        // --- GLOBAL STATE ---
-        let isHost = false, peer = null, con = null, roomCode = '';
-        let gameStarted = false, menuActive = true;
-        let isSoloMode = false;
-        let score = 0, enemyScore = 0, combo = 0, timeLeft = 180;
-        let isReady = false, peerIsReady = false;
-        let timeWarpActive = false, doubleScoreActive = false;
-        let powerUpTimers = [];
+  <div id="centerMessage">
+    <div class="big">MOVE<br>REALITY.</div>
+    <div class="small">Your hands are the controller.<br>Reach out and change the game.</div>
+  </div>
 
-        // --- AUTO FULLSCREEN ---
-        function enterFullscreen() {
-            const el = document.documentElement;
-            const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-            if (req) { try { req.call(el).catch(()=>{}); } catch(e) {} }
-        }
-        document.addEventListener('touchstart', () => { if (!document.fullscreenElement && gameStarted) enterFullscreen(); }, { passive: true });
-        document.addEventListener('click', () => { if (!document.fullscreenElement && gameStarted) enterFullscreen(); });
+  <div id="toast"></div>
 
-        // --- THREE.JS SETUP ---
-        const canvas = document.getElementById('game-canvas');
-        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-        renderer.setSize(window.innerWidth, window.innerHeight);
+  <div id="bottomBar">
+    <div id="gestureHint">
+      <span id="gestureState">READY</span><br>
+      Open palm: catch · Close fist: throw
+    </div>
+    <button id="exitBtn">EXIT ✕</button>
+  </div>
 
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050505);
-        scene.fog = new THREE.Fog(0x050505, 30, 120);
+  <div id="camStatus">Camera is starting…</div>
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 250);
-        camera.position.set(0, 0, 15); camera.lookAt(0, 0, 0);
+  <!-- HOME -->
+  <section class="screen" id="homeScreen">
+    <div class="panel">
+      <div class="eyebrow">✦ HAND-TRACKED ARCADE</div>
+      <div class="orb">✧</div>
+      <h1>THE HAND<br>OF GOD</h1>
+      <p class="subtitle">
+        Control a living field of energy with your real hands.
+        Catch glowing spheres, build combos, and throw with power.
+      </p>
+      <button class="primaryBtn" id="soloBtn">PLAY SOLO</button>
+      <button class="secondaryBtn" id="onlineBtn">ONLINE DUEL</button>
 
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x000000, 0.8);
-        scene.add(hemiLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        dirLight.position.set(10, 10, 20); scene.add(dirLight);
+      <div class="instructions">
+        <div class="instructionRow"><b>✋</b><span><strong>Open your palm</strong> to catch a nearby sphere.</span></div>
+        <div class="instructionRow"><b>✊</b><span><strong>Close your fist</strong> to throw a held sphere.</span></div>
+        <div class="instructionRow"><b>〰</b><span>Move your index fingertip to draw a fading energy trail.</span></div>
+      </div>
+      <div id="homeStatus" class="subtitle" style="margin-bottom:0;font-size:11px"></div>
+    </div>
+  </section>
 
-        // --- SPHERE POOLING & MECHANICS ---
-        const spheres = [];
-        const sphereGeo = new THREE.IcosahedronGeometry(1, 0);
-        const goldMat = new THREE.MeshStandardMaterial({ color: 0xFFD700, emissive: 0xFFAA00, emissiveIntensity: 0.6, roughness: 0.3, metalness: 0.8 });
-        const warpMat = new THREE.MeshStandardMaterial({ color: 0x00FFFF, emissive: 0x00AAAA, emissiveIntensity: 0.8, roughness: 0.2, metalness: 0.5 });
-        const doubleMat = new THREE.MeshStandardMaterial({ color: 0xFF00FF, emissive: 0xAA00AA, emissiveIntensity: 0.8, roughness: 0.2, metalness: 0.5 });
+  <!-- ONLINE MENU -->
+  <section class="screen hidden" id="onlineScreen">
+    <div class="panel">
+      <div class="eyebrow">✦ PEER-TO-PEER MULTIPLAYER</div>
+      <h1 style="margin-top:18px">ONLINE<br>DUEL</h1>
+      <p class="subtitle">Create a room or enter a friend's six-character code.</p>
 
-        // Target origin for homing vectors
-        const origin = new THREE.Vector3(0, 0, 5); 
+      <input id="playerName" class="input" maxlength="16" placeholder="Your player name" value="Player">
+      <button class="primaryBtn" id="hostBtn">CREATE ROOM</button>
 
-        function spawnSphere() {
-            let mat = goldMat;
-            let type = 'gold';
-            const rand = Math.random();
-            if (rand > 0.92) { mat = warpMat; type = 'warp'; }
-            else if (rand > 0.84) { mat = doubleMat; type = 'double'; }
+      <div id="hostRoomArea" class="hidden">
+        <p class="subtitle" style="margin-bottom:6px">Share this code with your friend:</p>
+        <div id="roomCodeDisplay" class="roomCode">------</div>
+        <button class="smallBtn" id="copyCodeBtn">COPY ROOM CODE</button>
+      </div>
 
-            const mesh = new THREE.Mesh(sphereGeo, mat);
-            
-            // Spawn from 360 degrees around the center
-            const radius = 40;
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(2 * Math.random() - 1);
-            const spawnPos = new THREE.Vector3(
-                radius * Math.sin(phi) * Math.cos(theta),
-                radius * Math.sin(phi) * Math.sin(theta),
-                radius * Math.cos(phi)
-            );
-            mesh.position.copy(spawnPos);
-            mesh.scale.setScalar(0.5 + Math.random() * 0.5);
-            scene.add(mesh);
+      <div style="height:1px;background:var(--line);margin:18px 0"></div>
+      <input id="joinCode" class="input" maxlength="6" placeholder="ENTER ROOM CODE" autocomplete="off" autocapitalize="characters">
+      <button class="secondaryBtn" id="joinBtn">JOIN ROOM</button>
 
-            // Calculate direction vector towards the origin/camera plane
-            const dir = new THREE.Vector3().subVectors(origin, spawnPos).normalize();
-            const speed = 0.3 + Math.random() * 0.2;
-            
-            spheres.push({ mesh, type, velocity: dir.multiplyScalar(speed), hit: false });
-        }
+      <div id="statusText">Online play needs an internet connection.</div>
+      <button class="secondaryBtn" id="backHomeBtn">BACK</button>
+    </div>
+  </section>
 
-        // --- MEDIAPIPE HANDS ---
-        const videoEl = document.getElementById('cam-video');
-        const handCanvas = document.getElementById('hand-overlay');
-        const handCtx = handCanvas.getContext('2d');
-        let handsTracker = null;
-        let latestHandLandmarks = [];
+  <!-- WAITING ROOM -->
+  <section class="screen hidden" id="waitingScreen">
+    <div class="panel">
+      <div class="eyebrow">✦ DUEL LOBBY</div>
+      <h1 style="margin-top:18px">READY<br>YOUR HANDS</h1>
+      <p class="subtitle" id="lobbyDescription">Waiting for your opponent to connect.</p>
+      <div class="roomCode" id="lobbyCode">------</div>
+      <div id="lobbyStatus" class="subtitle">Connecting…</div>
+      <button class="primaryBtn" id="readyBtn">I'M READY</button>
+      <button class="secondaryBtn" id="cancelOnlineBtn">CANCEL</button>
+    </div>
+  </section>
 
-        async function initMediaPipe() {
-            handsTracker = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-            handsTracker.setOptions({maxNumHands: 2, modelComplexity: 0, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5});
-            handsTracker.onResults(onHandResults);
-            try {
-                // Request FRONT camera for self-view
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                videoEl.srcObject = stream;
-                await videoEl.play();
-                processVideoFrame();
-            } catch(e) {
-                console.error("Camera access denied or failed", e);
+  <!-- RESULT -->
+  <section class="screen hidden" id="resultScreen">
+    <div class="panel">
+      <div class="eyebrow">✦ MATCH COMPLETE</div>
+      <div class="orb">✧</div>
+      <h1 id="resultTitle">WELL PLAYED</h1>
+      <p class="subtitle" id="resultDescription">The energy settles.</p>
+      <div class="resultScore" id="resultScore">000</div>
+      <button class="primaryBtn" id="againBtn">PLAY AGAIN</button>
+      <button class="secondaryBtn" id="resultHomeBtn">MAIN MENU</button>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+<script>
+(() => {
+'use strict';
+
+/* =========================================================
+   THE HAND OF GOD
+   Single-file game: rendering, hand tracking, gestures,
+   object physics, match state and peer-to-peer networking.
+   ========================================================= */
+
+const $ = id => document.getElementById(id);
+
+const ui = {
+  camera: $('camera'),
+  threeCanvas: $('threeLayer'),
+  handCanvas: $('handLayer'),
+  lightWash: $('lightWash'),
+  home: $('homeScreen'),
+  online: $('onlineScreen'),
+  waiting: $('waitingScreen'),
+  result: $('resultScreen'),
+  hud: $('hud'),
+  center: $('centerMessage'),
+  bottom: $('bottomBar'),
+  badge: $('connectionBadge'),
+  score: $('scoreValue'),
+  timer: $('timerValue'),
+  combo: $('comboValue'),
+  gesture: $('gestureState'),
+  toast: $('toast'),
+  camStatus: $('camStatus'),
+  homeStatus: $('homeStatus'),
+  status: $('statusText'),
+  hostRoom: $('hostRoomArea'),
+  roomDisplay: $('roomCodeDisplay'),
+  lobbyCode: $('lobbyCode'),
+  lobbyStatus: $('lobbyStatus')
+};
+
+const state = {
+  mode: 'menu',
+  running: false,
+  ended: false,
+  score: 0,
+  opponentScore: 0,
+  combo: 1,
+  comboHits: 0,
+  timeLeft: 180,
+  lastFrame: performance.now(),
+  lastSpawn: 0,
+  lastNetSend: 0,
+  lastAI: 0,
+  lastScoreAt: 0,
+  lastGesture: 'unknown',
+  lastGestureChange: 0,
+  sessionStarted: false
+};
+
+const handsState = {
+  active: false,
+  busy: false,
+  hands: [],
+  previous: [],
+  trail: [],
+  lastVideoTime: -1,
+  lastFrameAt: 0,
+  gestureText: 'SHOW YOUR HAND',
+  stream: null
+};
+
+const net = {
+  peer: null,
+  connection: null,
+  isHost: false,
+  roomCode: '',
+  playerName: 'Player',
+  remoteName: 'Opponent',
+  connected: false,
+  localReady: false,
+  remoteReady: false,
+  remoteHand: null,
+  remoteActionAt: 0,
+  lastSnapshot: 0,
+  lastPing: 0,
+  closing: false
+};
+
+let renderer, scene, camera3d, clock;
+let objects = [];
+let particles = [];
+let remoteVisuals = [];
+let animationId = 0;
+let mediaPipeHands = null;
+let toastTimer = null;
+let gameEpoch = 0;
+
+const handCtx = ui.handCanvas.getContext('2d');
+
+function showScreen(screen) {
+  [ui.home, ui.online, ui.waiting, ui.result].forEach(s => s.classList.add('hidden'));
+  if (screen) screen.classList.remove('hidden');
+}
+
+function setBadge(text) {
+  ui.badge.textContent = '● ' + text;
+}
+
+function showToast(text, duration = 1500) {
+  ui.toast.textContent = text;
+  ui.toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => ui.toast.classList.remove('show'), duration);
+}
+
+function setHomeStatus(text) {
+  ui.homeStatus.textContent = text || '';
+}
+
+function setOnlineStatus(text) {
+  ui.status.textContent = text || '';
+}
+
+function setLobbyStatus(text) {
+  ui.lobbyStatus.textContent = text || '';
+}
+
+function resize() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.7);
+
+  ui.handCanvas.width = Math.round(w * dpr);
+  ui.handCanvas.height = Math.round(h * dpr);
+  ui.handCanvas.style.width = w + 'px';
+  ui.handCanvas.style.height = h + 'px';
+  handCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  if (renderer && camera3d) {
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(w, h, false);
+    camera3d.aspect = w / h;
+    camera3d.updateProjectionMatrix();
+  }
+}
+
+function initThree() {
+  if (renderer) return;
+
+  renderer = new THREE.WebGLRenderer({
+    canvas: ui.threeCanvas,
+    alpha: true,
+    antialias: true,
+    powerPreference: 'high-performance'
+  });
+
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  renderer.setClearColor(0x000000, 0);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+
+  scene = new THREE.Scene();
+
+  camera3d = new THREE.PerspectiveCamera(
+    42,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    100
+  );
+  camera3d.position.set(0, 0, 12);
+  camera3d.lookAt(0, 0, 0);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+
+  const lightA = new THREE.PointLight(0x7b8dff, 2.5, 35);
+  lightA.position.set(-4, 5, 8);
+  scene.add(lightA);
+
+  const lightB = new THREE.PointLight(0x44e7f2, 2, 35);
+  lightB.position.set(5, -3, 7);
+  scene.add(lightB);
+
+  clock = new THREE.Clock();
+
+  resize();
+  requestAnimationFrame(renderLoop);
+}
+
+function renderLoop() {
+  animationId = requestAnimationFrame(renderLoop);
+  if (!renderer || !scene) return;
+
+  const delta = Math.min(clock.getDelta(), 0.04);
+  const elapsed = performance.now() * 0.001;
+
+  for (const item of objects) {
+    if (!item.mesh) continue;
+
+    if (item.kind === 'orb') {
+      item.mesh.rotation.x += delta * 0.55;
+      item.mesh.rotation.y += delta * 0.8;
+      item.mesh.position.y += Math.sin(elapsed * 2.2 + item.phase) * delta * 0.16;
+      item.mesh.position.x += item.vx * delta;
+      item.mesh.position.y += item.vy * delta;
+
+      item.vx *= Math.pow(0.985, delta * 60);
+      item.vy *= Math.pow(0.985, delta * 60);
+
+      if (item.mesh.position.x < -6.8 || item.mesh.position.x > 6.8) {
+        item.vx *= -0.8;
+        item.mesh.position.x = THREE.MathUtils.clamp(item.mesh.position.x, -6.8, 6.8);
+      }
+
+      if (item.mesh.position.y < -5.8 || item.mesh.position.y > 5.8) {
+        item.vy *= -0.8;
+        item.mesh.position.y = THREE.MathUtils.clamp(item.mesh.position.y, -5.8, 5.8);
+      }
+    } else if (item.kind === 'power') {
+      item.mesh.rotation.y += delta;
+      item.mesh.rotation.z += delta * .6;
+      item.mesh.position.y += Math.sin(elapsed * 2 + item.phase) * delta * .12;
+    }
+
+    if (item.mesh.material && item.mesh.material.emissiveIntensity !== undefined) {
+      item.mesh.material.emissiveIntensity =
+        0.5 + Math.sin(elapsed * 3 + item.phase) * 0.18;
+    }
+  }
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= delta;
+    p.mesh.position.addScaledVector(p.velocity, delta);
+    p.mesh.scale.multiplyScalar(0.985);
+
+    if (p.life <= 0) {
+      scene.remove(p.mesh);
+      disposeMesh(p.mesh);
+      particles.splice(i, 1);
+    }
+  }
+
+  renderer.render(scene, camera3d);
+}
+
+function disposeMesh(mesh) {
+  if (!mesh) return;
+  if (mesh.geometry) mesh.geometry.dispose();
+  if (mesh.material) {
+    if (Array.isArray(mesh.material)) mesh.material.forEach(m => m.dispose());
+    else mesh.material.dispose();
+  }
+}
+
+function worldFromScreen(nx, ny, z = 0) {
+  const v = new THREE.Vector3(
+    (nx - 0.5) * 2,
+    -(ny - 0.5) * 2,
+    0.5
+  );
+  v.unproject(camera3d);
+
+  const dir = v.sub(camera3d.position).normalize();
+  const distance = (z - camera3d.position.z) / dir.z;
+  return camera3d.position.clone().addScaledVector(dir, distance);
+}
+
+function randomScreenPoint() {
+  return {
+    x: 0.12 + Math.random() * 0.76,
+    y: 0.18 + Math.random() * 0.64
+  };
+}
+
+function makeGlowMaterial(color, opacity = 1) {
+  return new THREE.MeshStandardMaterial({
+    color,
+    emissive: color,
+    emissiveIntensity: 0.65,
+    metalness: 0.1,
+    roughness: 0.22,
+    transparent: opacity < 1,
+    opacity
+  });
+}
+
+function makeSphereMesh(color, radius = 0.25) {
+  const group = new THREE.Group();
+
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(radius, 24, 18),
+    makeGlowMaterial(color)
+  );
+
+  const halo = new THREE.Mesh(
+    new THREE.SphereGeometry(radius * 1.48, 20, 14),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: .12,
+      depthWrite: false
+    })
+  );
+
+  group.add(halo, core);
+  group.userData.core = core;
+  group.userData.halo = halo;
+
+  return group;
+}
+
+function addOrb(options = {}) {
+  if (!scene) return null;
+
+  const point = options.point || randomScreenPoint();
+  const color = options.color || 0x6c7cff;
+  const power = !!options.power;
+  const mesh = makeSphereMesh(color, power ? 0.3 : 0.24);
+  const pos = worldFromScreen(point.x, point.y, 0);
+
+  mesh.position.copy(pos);
+  scene.add(mesh);
+
+  const item = {
+    id: options.id || ('orb_' + Math.random().toString(36).slice(2, 9)),
+    kind: power ? 'power' : 'orb',
+    powerType: options.powerType || '',
+    mesh,
+    x: point.x,
+    y: point.y,
+    vx: (Math.random() - .5) * 1.8,
+    vy: (Math.random() - .5) * 1.8,
+    phase: Math.random() * 10,
+    owner: null,
+    born: performance.now(),
+    radius: power ? 0.3 : 0.24
+  };
+
+  objects.push(item);
+  return item;
+}
+
+function removeObject(item) {
+  const index = objects.indexOf(item);
+  if (index >= 0) objects.splice(index, 1);
+  if (item.mesh && scene) scene.remove(item.mesh);
+  if (item.mesh) disposeMesh(item.mesh);
+}
+
+function clearGameObjects() {
+  for (const item of objects) {
+    if (item.mesh && scene) scene.remove(item.mesh);
+    if (item.mesh) disposeMesh(item.mesh);
+  }
+  objects = [];
+
+  for (const p of particles) {
+    if (p.mesh && scene) scene.remove(p.mesh);
+    if (p.mesh) disposeMesh(p.mesh);
+  }
+  particles = [];
+}
+
+function burstAt(x, y, color = 0x63dff3, count = 13) {
+  if (!scene) return;
+
+  const pos = worldFromScreen(x, y, 0);
+  const geometry = new THREE.SphereGeometry(0.045, 8, 6);
+
+  for (let i = 0; i < count; i++) {
+    const material = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: .9
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.copy(pos);
+    scene.add(mesh);
+
+    particles.push({
+      mesh,
+      life: .35 + Math.random() * .55,
+      velocity: new THREE.Vector3(
+        (Math.random() - .5) * 4,
+        (Math.random() - .5) * 4,
+        (Math.random() - .5) * 1.5
+      )
+    });
+  }
+}
+
+function updateObjectScreenPosition(item) {
+  if (!item.mesh) return;
+  const p = worldFromScreen(item.x, item.y, 0);
+  item.mesh.position.x = THREE.MathUtils.lerp(item.mesh.position.x, p.x, .35);
+  item.mesh.position.y = THREE.MathUtils.lerp(item.mesh.position.y, p.y, .35);
+}
+
+function updateHUD() {
+  ui.score.textContent = String(state.score).padStart(3, '0');
+  ui.timer.textContent = formatTime(Math.max(0, Math.ceil(state.timeLeft)));
+  ui.combo.textContent = '×' + state.combo;
+}
+
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+/* =========================
+   CAMERA AND HAND TRACKING
+   ========================= */
+
+async function startCameraAndHands() {
+  ui.camStatus.style.display = 'block';
+  ui.camStatus.textContent = 'Requesting camera permission…';
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    throw new Error('Camera access needs HTTPS or localhost. Open the deployed HTTPS site.');
+  }
+
+  if (!window.Hands) {
+    throw new Error('MediaPipe failed to load. Check your internet connection and reload.');
+  }
+
+  if (!handsState.stream) {
+    handsState.stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        facingMode: 'user',
+        width: { ideal: 960 },
+        height: { ideal: 720 },
+        frameRate: { ideal: 30, max: 30 }
+      }
+    });
+    ui.camera.srcObject = handsState.stream;
+    await ui.camera.play();
+  }
+
+  ui.camera.classList.add('visible');
+  ui.camStatus.textContent = 'Camera ready · show your hand';
+
+  if (!mediaPipeHands) {
+    mediaPipeHands = new Hands({
+      locateFile: file => 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/' + file
+    });
+
+    mediaPipeHands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: .55,
+      minTrackingConfidence: .5
+    });
+
+    mediaPipeHands.onResults(onHandResults);
+  }
+
+  handsState.active = true;
+  handsState.lastVideoTime = -1;
+  pumpCameraFrames();
+}
+
+async function pumpCameraFrames() {
+  if (!handsState.active || !mediaPipeHands) return;
+  if (handsState.busy) {
+    requestAnimationFrame(pumpCameraFrames);
+    return;
+  }
+
+  if (ui.camera.readyState >= 2 && ui.camera.currentTime !== handsState.lastVideoTime) {
+    handsState.busy = true;
+    handsState.lastVideoTime = ui.camera.currentTime;
+
+    try {
+      await mediaPipeHands.send({ image: ui.camera });
+    } catch (err) {
+      console.warn('Hand tracking frame failed:', err);
+    }
+
+    handsState.busy = false;
+  }
+
+  requestAnimationFrame(pumpCameraFrames);
+}
+
+function stopCamera() {
+  handsState.active = false;
+  handsState.busy = false;
+
+  if (handsState.stream) {
+    handsState.stream.getTracks().forEach(track => track.stop());
+    handsState.stream = null;
+  }
+
+  ui.camera.srcObject = null;
+  ui.camera.classList.remove('visible');
+  ui.camStatus.style.display = 'none';
+}
+
+function landmarkDistance(a, b) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function isFingerExtended(lm, tip, pip, mcp) {
+  const wrist = lm[0];
+  const tipD = landmarkDistance(lm[tip], wrist);
+  const pipD = landmarkDistance(lm[pip], wrist);
+  const mcpD = landmarkDistance(lm[mcp], wrist);
+  return tipD > pipD * 1.05 && tipD > mcpD * 1.2;
+}
+
+function classifyGesture(lm) {
+  if (!lm || lm.length < 21) return 'unknown';
+
+  const index = isFingerExtended(lm, 8, 6, 5);
+  const middle = isFingerExtended(lm, 12, 10, 9);
+  const ring = isFingerExtended(lm, 16, 14, 13);
+  const pinky = isFingerExtended(lm, 20, 18, 17);
+
+  const extended = [index, middle, ring, pinky].filter(Boolean).length;
+
+  const palmSize = landmarkDistance(lm[0], lm[9]) || .1;
+  const thumbDistance = landmarkDistance(lm[4], lm[5]) / palmSize;
+  const thumbOpen = thumbDistance > .55;
+
+  if (extended >= 3) return 'open';
+  if (extended <= 1 && !thumbOpen) return 'fist';
+  if (index && !middle && !ring && !pinky) return 'point';
+  return 'partial';
+}
+
+function smoothHand(previous, current) {
+  if (!previous) return current;
+  const blend = .42;
+  return {
+    x: previous.x + (current.x - previous.x) * blend,
+    y: previous.y + (current.y - previous.y) * blend,
+    rawX: current.rawX,
+    rawY: current.rawY,
+    gesture: current.gesture,
+    landmarks: current.landmarks,
+    velocityX: current.x - previous.x,
+    velocityY: current.y - previous.y,
+    time: performance.now()
+  };
+}
+
+function onHandResults(results) {
+  const found = [];
+
+  if (results.multiHandLandmarks) {
+    for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+      const lm = results.multiHandLandmarks[i];
+      const tip = lm[8];
+
+      // Mirror the x coordinate because the camera preview is mirrored.
+      const rawX = 1 - tip.x;
+      const rawY = tip.y;
+
+      const prior = handsState.hands[i];
+      const current = {
+        x: rawX,
+        y: rawY,
+        rawX,
+        rawY,
+        gesture: classifyGesture(lm),
+        landmarks: lm,
+        velocityX: 0,
+        velocityY: 0,
+        time: performance.now()
+      };
+
+      found.push(smoothHand(prior, current));
+    }
+  }
+
+  handsState.previous = handsState.hands;
+  handsState.hands = found;
+
+  if (found.length) {
+    ui.camStatus.textContent = 'Hand detected · ' + found.length;
+    processHandGameplay(found);
+  } else {
+    ui.camStatus.textContent = 'Show your hand to the camera';
+    ui.gesture.textContent = 'SHOW YOUR HAND';
+  }
+
+  drawHandOverlay(found);
+}
+
+function processHandGameplay(found) {
+  if (!state.running || state.ended) return;
+
+  for (let i = 0; i < found.length; i++) {
+    const hand = found[i];
+    const prior = handsState.previous[i];
+    const speed = prior
+      ? Math.hypot(hand.x - prior.x, hand.y - prior.y)
+      : 0;
+
+    updateTrail(hand);
+    processGesture(hand, speed);
+  }
+}
+
+function updateTrail(hand) {
+  const now = performance.now();
+  handsState.trail.push({
+    x: hand.x * window.innerWidth,
+    y: hand.y * window.innerHeight,
+    time: now,
+    gesture: hand.gesture
+  });
+
+  const maxAge = 650;
+  handsState.trail = handsState.trail.filter(p => now - p.time < maxAge);
+
+  if (handsState.trail.length > 90) {
+    handsState.trail.splice(0, handsState.trail.length - 90);
+  }
+}
+
+function drawHandOverlay(found) {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const now = performance.now();
+
+  handCtx.clearRect(0, 0, w, h);
+
+  // Smooth, short-lived air-writing trail.
+  for (let i = 1; i < handsState.trail.length; i++) {
+    const a = handsState.trail[i - 1];
+    const b = handsState.trail[i];
+    const age = (now - b.time) / 650;
+    if (age >= 1) continue;
+
+    const alpha = (1 - age) * .42;
+    handCtx.beginPath();
+    handCtx.moveTo(a.x, a.y);
+    handCtx.lineTo(b.x, b.y);
+    handCtx.strokeStyle = b.gesture === 'fist'
+      ? `rgba(94,108,255,${alpha})`
+      : `rgba(43,194,225,${alpha})`;
+    handCtx.lineWidth = 2 + (1 - age) * 3;
+    handCtx.lineCap = 'round';
+    handCtx.shadowBlur = 12;
+    handCtx.shadowColor = 'rgba(70,170,255,.35)';
+    handCtx.stroke();
+  }
+
+  handCtx.shadowBlur = 0;
+
+  for (const hand of found) {
+    const x = hand.x * w;
+    const y = hand.y * h;
+    const isOpen = hand.gesture === 'open';
+    const isFist = hand.gesture === 'fist';
+
+    const color = isFist ? '#6473ff' : '#25bcd8';
+
+    // Energy glove: luminous fingertip, rings and palm halo.
+    const radius = isOpen ? 25 : 18;
+    const gradient = handCtx.createRadialGradient(x, y, 2, x, y, radius * 2.4);
+    gradient.addColorStop(0, isFist
+      ? 'rgba(95,113,255,.32)'
+      : 'rgba(50,217,239,.28)');
+    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+
+    handCtx.fillStyle = gradient;
+    handCtx.beginPath();
+    handCtx.arc(x, y, radius * 2.4, 0, Math.PI * 2);
+    handCtx.fill();
+
+    handCtx.beginPath();
+    handCtx.arc(x, y, radius, 0, Math.PI * 2);
+    handCtx.strokeStyle = color;
+    handCtx.lineWidth = 2;
+    handCtx.stroke();
+
+    handCtx.beginPath();
+    handCtx.arc(x, y, 5, 0, Math.PI * 2);
+    handCtx.fillStyle = '#ffffff';
+    handCtx.shadowBlur = 13;
+    handCtx.shadowColor = color;
+    handCtx.fill();
+    handCtx.shadowBlur = 0;
+
+    // Tiny brackets give the tracked fingertip a designed reticle.
+    const r = radius + 5;
+    handCtx.strokeStyle = color;
+    handCtx.lineWidth = 2;
+    handCtx.beginPath();
+    handCtx.moveTo(x-r, y-r/2);
+    handCtx.lineTo(x-r, y-r);
+    handCtx.lineTo(x-r/2, y-r);
+    handCtx.moveTo(x+r/2, y-r);
+    handCtx.lineTo(x+r, y-r);
+    handCtx.lineTo(x+r, y-r/2);
+    handCtx.moveTo(x-r, y+r/2);
+    handCtx.lineTo(x-r, y+r);
+    handCtx.lineTo(x-r/2, y+r);
+    handCtx.moveTo(x+r/2, y+r);
+    handCtx.lineTo(x+r, y+r);
+    handCtx.lineTo(x+r, y+r/2);
+    handCtx.stroke();
+  }
+}
+
+/* =========================
+   CATCH, HOLD AND THROW
+   ========================= */
+
+function processGesture(hand, speed) {
+  const previousGesture = hand._lastProcessedGesture || 'unknown';
+  const gesture = hand.gesture;
+  const now = performance.now();
+
+  if (gesture === 'open') {
+    ui.gesture.textContent = 'OPEN PALM · CATCH';
+    if (net.remoteHand && net.remoteHand.gesture === 'open') {
+      // Each player's local hand is used for local interaction.
+    }
+    tryCatch(hand);
+  } else if (gesture === 'fist') {
+    ui.gesture.textContent = 'CLOSED FIST · THROW';
+    tryThrow(hand, speed);
+  } else if (gesture === 'point') {
+    ui.gesture.textContent = 'AIR WRITE · POINT';
+  } else {
+    ui.gesture.textContent = 'HAND TRACKED';
+  }
+
+  if (previousGesture !== gesture) {
+    hand._lastProcessedGesture = gesture;
+    state.lastGestureChange = now;
+  }
+
+  state.lastGesture = gesture;
+}
+
+function tryCatch(hand) {
+  if (heldObject) return;
+
+  let nearest = null;
+  let nearestDist = Infinity;
+
+  for (const item of objects) {
+    if (item.owner || item.kind !== 'orb') continue;
+
+    const dist = Math.hypot(item.x - hand.x, item.y - hand.y);
+    if (dist < nearestDist) {
+      nearestDist = dist;
+      nearest = item;
+    }
+  }
+
+  // A small catch radius makes the gesture forgiving on a tablet.
+  if (nearest && nearestDist < .13) {
+    heldObject = nearest;
+    nearest.owner = 'local';
+    heldObject.vx = 0;
+    heldObject.vy = 0;
+    showToast('CAUGHT · CLOSE YOUR FIST TO THROW');
+    burstAt(hand.x, hand.y, 0x42d9ec, 8);
+    sendPacket({
+      type: 'catch',
+      id: nearest.id,
+      x: hand.x,
+      y: hand.y
+    });
+  }
+}
+
+function tryThrow(hand, speed) {
+  if (!heldObject) return;
+
+  const item = heldObject;
+  heldObject = null;
+  item.owner = null;
+
+  const sx = hand.velocityX || 0;
+  const sy = hand.velocityY || 0;
+  const velocityBoost = Math.min(3.5, speed * 20);
+
+  item.x = hand.x;
+  item.y = hand.y;
+  item.vx = THREE.MathUtils.clamp(sx * 18, -4.5, 4.5);
+  item.vy = THREE.MathUtils.clamp(-sy * 18 - velocityBoost * .25, -4.5, 4.5);
+
+  // Throwing earns points; fast movement adds a small bonus.
+  const throwPoints = 5 + Math.min(5, Math.floor(velocityBoost));
+  addScore(throwPoints, 'POWER THROW +' + throwPoints);
+  burstAt(hand.x, hand.y, 0x6578ff, 14);
+
+  sendPacket({
+    type: 'throw',
+    id: item.id,
+    x: item.x,
+    y: item.y,
+    vx: item.vx,
+    vy: item.vy,
+    score: state.score
+  });
+}
+
+let heldObject = null;
+
+function addScore(amount, message) {
+  state.score += amount;
+  state.comboHits++;
+  state.combo = Math.min(12, 1 + Math.floor(state.comboHits / 3));
+  state.lastScoreAt = performance.now();
+  updateHUD();
+  if (message) showToast(message);
+  sendPacket({
+    type: 'score',
+    score: state.score,
+    combo: state.combo
+  });
+}
+
+/* =========================
+   GAME LOOP AND MATCHES
+   ========================= */
+
+async function startGame(mode) {
+  state.mode = mode;
+  state.running = false;
+  state.ended = false;
+  state.score = 0;
+  state.opponentScore = 0;
+  state.combo = 1;
+  state.comboHits = 0;
+  state.timeLeft = 180;
+  state.lastSpawn = 0;
+  state.lastAI = performance.now();
+  state.sessionStarted = true;
+  gameEpoch++;
+
+  clearGameObjects();
+  heldObject = null;
+  handsState.hands = [];
+  handsState.previous = [];
+  handsState.trail = [];
+
+  initThree();
+
+  showScreen(null);
+  ui.hud.style.display = 'grid';
+  ui.bottom.style.display = 'flex';
+  ui.center.style.display = 'block';
+  ui.center.innerHTML = '<div class="big">PREPARE<br>YOURSELF</div><div class="small">Allow camera access and show your hand.</div>';
+  ui.lightWash.style.background = 'rgba(255,255,255,.25)';
+  setBadge(mode === 'solo' ? 'SOLO TRIAL' : 'ONLINE DUEL');
+
+  try {
+    await startCameraAndHands();
+  } catch (error) {
+    showScreen(ui.home);
+    ui.hud.style.display = 'none';
+    ui.bottom.style.display = 'none';
+    ui.center.style.display = 'block';
+    ui.center.innerHTML = '';
+    setHomeStatus(error.message || 'Unable to start the camera.');
+    return;
+  }
+
+  if (mode === 'online') {
+    if (!net.connected) {
+      showToast('Waiting for your opponent');
+      showScreen(ui.waiting);
+      setLobbyStatus('Connect to a room before starting.');
+      return;
+    }
+
+    net.localReady = true;
+    sendPacket({ type: 'ready', name: net.playerName });
+
+    showScreen(ui.waiting);
+    ui.center.style.display = 'none';
+    setLobbyStatus('You are ready. Waiting for the other player.');
+    ui.readyBtn.textContent = 'READY ✓';
+    return;
+  }
+
+  beginCountdown();
+}
+
+function beginCountdown() {
+  if (state.ended) return;
+  ui.center.style.display = 'block';
+  let count = 3;
+  ui.center.innerHTML = '<div class="big">' + count + '</div><div class="small">Find a glowing sphere.</div>';
+
+  const epoch = gameEpoch;
+  const timer = setInterval(() => {
+    if (epoch !== gameEpoch || state.ended) {
+      clearInterval(timer);
+      return;
+    }
+
+    count--;
+    if (count > 0) {
+      ui.center.innerHTML = '<div class="big">' + count + '</div><div class="small">Open palm to catch · fist to throw</div>';
+    } else {
+      clearInterval(timer);
+      state.running = true;
+      ui.center.style.display = 'none';
+      setBadge(state.mode === 'solo' ? 'SOLO ACTIVE' : 'DUEL ACTIVE');
+      showToast('GO · CONTROL THE ENERGY', 1800);
+      for (let i = 0; i < 5; i++) addOrb();
+      if (state.mode === 'online') {
+        sendPacket({ type: 'start', at: Date.now() });
+      }
+    }
+  }, 850);
+}
+
+function gameTick(now) {
+  if (!state.running || state.ended) return;
+
+  const delta = Math.min(.05, Math.max(0, (now - state.lastFrame) / 1000));
+  state.lastFrame = now;
+  state.timeLeft -= delta;
+
+  if (state.timeLeft <= 0) {
+    state.timeLeft = 0;
+    updateHUD();
+    endMatch();
+    return;
+  }
+
+  // Keep the held object attached to the tracked fingertip.
+  if (heldObject && handsState.hands.length) {
+    const hand = handsState.hands[0];
+    heldObject.x = hand.x;
+    heldObject.y = hand.y;
+    heldObject.vx = 0;
+    heldObject.vy = 0;
+    updateObjectScreenPosition(heldObject);
+  }
+
+  // Spawn pacing remains gentle so the camera view stays readable.
+  if (now - state.lastSpawn > 1550 && objects.length < 10) {
+    state.lastSpawn = now;
+
+    if (Math.random() < .14) {
+      const powerTypes = [
+        { type: 'bonus', color: 0xffcc55 },
+        { type: 'time', color: 0x37d8e9 },
+        { type: 'double', color: 0xff68ce }
+      ];
+      const p = powerTypes[Math.floor(Math.random() * powerTypes.length)];
+      addOrb({
+        power: true,
+        powerType: p.type,
+        color: p.color
+      });
+    } else {
+      const colors = [0x7184ff, 0x4eddea, 0xff86c9, 0xffc75a];
+      addOrb({ color: colors[Math.floor(Math.random() * colors.length)] });
+    }
+  }
+
+  for (const item of objects) {
+    if (item.owner) continue;
+    updateObjectScreenPosition(item);
+  }
+
+  if (state.mode === 'solo') {
+    soloAI(now);
+  }
+
+  if (state.mode === 'online') {
+    if (now - net.lastSnapshot > 80) {
+      net.lastSnapshot = now;
+      sendPacket({
+        type: 'snapshot',
+        score: state.score,
+        timeLeft: state.timeLeft,
+        hand: handsState.hands[0]
+          ? {
+              x: handsState.hands[0].x,
+              y: handsState.hands[0].y,
+              gesture: handsState.hands[0].gesture
             }
-        }
+          : null
+      });
+    }
+  }
 
-        async function processVideoFrame() {
-            if (videoEl.readyState >= 2) {
-                await handsTracker.send({image: videoEl});
-            }
-            requestAnimationFrame(processVideoFrame);
-        }
+  updateHUD();
+}
 
-        function onHandResults(results) {
-            latestHandLandmarks = [];
-            if (results.multiHandLandmarks) {
-                results.multiHandLandmarks.forEach(landmarks => {
-                    // Mirror X coordinates for front camera self-view
-                    const mapped = landmarks.map(p => ({ x: (1 - p.x) * handCanvas.width, y: p.y * handCanvas.height, z: p.z }));
-                    latestHandLandmarks.push(mapped);
-                });
-            }
-        }
+function soloAI(now) {
+  if (now - state.lastAI < 2500) return;
+  state.lastAI = now;
 
-        function drawHandSkeleton(landmarks) {
-            const connections = [
-                [0,1],[1,2],[2,3],[3,4], 
-                [0,5],[5,6],[6,7],[7,8], 
-                [5,9],[9,10],[10,11],[11,12], 
-                [9,13],[13,14],[14,15],[15,16], 
-                [13,17],[17,18],[18,19],[19,20], 
-                [0,17] 
-            ];
-            
-            handCtx.strokeStyle = 'rgba(0, 170, 255, 1)';
-            handCtx.lineWidth = 4;
-            handCtx.shadowColor = 'rgba(0, 170, 255, 1)';
-            handCtx.shadowBlur = 15;
-            
-            connections.forEach(([i, j]) => {
-                handCtx.beginPath();
-                handCtx.moveTo(landmarks[i].x, landmarks[i].y);
-                handCtx.lineTo(landmarks[j].x, landmarks[j].y);
-                handCtx.stroke();
-            });
+  // Simple, paced opponent scoring rather than a random point every frame.
+  if (Math.random() < .55) {
+    state.opponentScore += 4 + Math.floor(Math.random() * 5);
+  }
+}
 
-            handCtx.fillStyle = 'rgba(255, 255, 255, 1)';
-            landmarks.forEach(p => {
-                handCtx.beginPath();
-                handCtx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-                handCtx.fill();
-            });
-            handCtx.shadowBlur = 0;
-        }
+function endMatch() {
+  if (state.ended) return;
+  state.ended = true;
+  state.running = false;
+  heldObject = null;
 
-        // --- COLLISION DETECTION & TRAIL DRAWING ---
-        function checkCollisionsAndDrawTrails() {
-            if (handCanvas.width !== window.innerWidth) {
-                handCanvas.width = window.innerWidth;
-                handCanvas.height = window.innerHeight;
-            }
-            handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+  sendPacket({
+    type: 'finish',
+    score: state.score,
+    opponentScore: state.opponentScore
+  });
 
-            // Draw hands
-            latestHandLandmarks.forEach(drawHandSkeleton);
+  ui.hud.style.display = 'none';
+  ui.bottom.style.display = 'none';
+  ui.center.style.display = 'none';
 
-            for (let i = spheres.length - 1; i >= 0; i--) {
-                const s = spheres[i];
-                if (s.hit) continue;
+  if (state.mode === 'solo') {
+    $('resultTitle').textContent =
+      state.score >= state.opponentScore ? 'VICTORY' : 'TRY AGAIN';
+    $('resultDescription').textContent =
+      'Your score: ' + state.score + ' · Practice opponent: ' + state.opponentScore;
+  } else {
+    $('resultTitle').textContent =
+      state.score > state.opponentScore ? 'VICTORY' :
+      state.score < state.opponentScore ? 'DEFEAT' : 'DRAW';
+    $('resultDescription').textContent =
+      'You: ' + state.score + ' · Opponent: ' + state.opponentScore;
+  }
 
-                // Project 3D sphere to 2D screen for collision and trail
-                const vector = s.mesh.position.clone().project(camera);
-                const sx = (vector.x * 0.5 + 0.5) * handCanvas.width;
-                const sy = (-vector.y * 0.5 + 0.5) * handCanvas.height;
+  $('resultScore').textContent = String(state.score).padStart(3, '0');
+  showScreen(ui.result);
+  setBadge('MATCH COMPLETE');
+}
 
-                // Draw Anime Speed Lines (Trail)
-                const trailLength = 40;
-                const trailEndVec = s.mesh.position.clone().sub(s.velocity.clone().multiplyScalar(trailLength)).project(camera);
-                const tx = (trailEndVec.x * 0.5 + 0.5) * handCanvas.width;
-                const ty = (-trailEndVec.y * 0.5 + 0.5) * handCanvas.height;
-                
-                handCtx.beginPath();
-                handCtx.moveTo(tx, ty);
-                handCtx.lineTo(sx, sy);
-                let trailColor = 'rgba(255, 215, 0, 0.8)'; // Gold
-                if (s.type === 'warp') trailColor = 'rgba(0, 255, 255, 0.8)';
-                if (s.type === 'double') trailColor = 'rgba(255, 0, 255, 0.8)';
-                handCtx.strokeStyle = trailColor;
-                handCtx.lineWidth = 3 * (1 - vector.z); // Scale by depth
-                handCtx.shadowColor = trailColor;
-                handCtx.shadowBlur = 10;
-                handCtx.stroke();
-                handCtx.shadowBlur = 0;
+function exitToMenu() {
+  gameEpoch++;
+  state.running = false;
+  state.ended = true;
+  heldObject = null;
+  stopCamera();
+  clearGameObjects();
+  ui.hud.style.display = 'none';
+  ui.bottom.style.display = 'none';
+  ui.center.style.display = 'block';
+  ui.center.innerHTML = '<div class="big">MOVE<br>REALITY.</div><div class="small">Your hands are the controller.</div>';
+  ui.lightWash.style.background = 'rgba(255,255,255,.36)';
+  showScreen(ui.home);
+  setBadge('STANDBY');
+}
 
-                // Check distance to any finger tip
-                const tips = [4, 8, 12, 16, 20];
-                for (const hand of latestHandLandmarks) {
-                    for (const tipIdx of tips) {
-                        const p = hand[tipIdx];
-                        const dist = Math.sqrt((p.x - sx)**2 + (p.y - sy)**2);
-                        if (dist < 35) { 
-                            s.hit = true;
-                            handleSphereHit(s);
-                            break;
-                        }
-                    }
-                    if (s.hit) break;
-                }
-            }
-        }
+/* =========================
+   ONLINE CONNECTION
+   Adapted room-code pattern:
+   room code + "_host", state/action packets and interpolation.
+   ========================= */
 
-        function handleSphereHit(s) {
-            scene.remove(s.mesh);
-            const idx = spheres.indexOf(s);
-            if (idx > -1) spheres.splice(idx, 1);
+function makeRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
 
-            if (s.type === 'gold') {
-                combo++;
-                let points = 1 * (doubleScoreActive ? 2 : 1);
-                if (combo > 3) points += Math.floor(combo / 3);
-                score += points;
-                updateHUD();
-            } else if (s.type === 'warp') {
-                timeWarpActive = true;
-                updateHUD();
-                clearTimeout(powerUpTimers['warp']);
-                powerUpTimers['warp'] = setTimeout(() => { timeWarpActive = false; }, 5000);
-            } else if (s.type === 'double') {
-                doubleScoreActive = true;
-                updateHUD();
-                clearTimeout(powerUpTimers['double']);
-                powerUpTimers['double'] = setTimeout(() => { doubleScoreActive = false; }, 7000);
-            }
-        }
+function cleanName(name) {
+  const value = String(name || 'Player').trim().replace(/[<>]/g, '');
+  return value.slice(0, 16) || 'Player';
+}
 
-        // --- P2P NETWORKING ---
-        const ui = {
-            menu: document.getElementById('menu-overlay'),
-            btnSolo: document.getElementById('btn-solo'), btnHost: document.getElementById('btn-host'), btnJoin: document.getElementById('btn-join'), btnBack: document.getElementById('btn-back'),
-            joinCont: document.getElementById('join-container'), hostCont: document.getElementById('host-container'),
-            roomInput: document.getElementById('room-input'), btnConnect: document.getElementById('btn-connect'),
-            roomDisplay: document.getElementById('room-display'), btnCopy: document.getElementById('btn-copy'),
-            hostStatus: document.getElementById('host-status'), statusDot: document.getElementById('status-dot'),
-            scoreVal: document.getElementById('score-val'), enemyVal: document.getElementById('enemy-val'), timerVal: document.getElementById('timer-val'),
-            comboVal: document.getElementById('combo-val'), comboPanel: document.getElementById('combo-panel'),
-            scorePanel: document.getElementById('score-panel'), enemyPanel: document.getElementById('enemy-panel'), timerPanel: document.getElementById('timer-panel'),
-            countdownText: document.getElementById('countdown-text')
-        };
+function resetNetworkState() {
+  net.localReady = false;
+  net.remoteReady = false;
+  net.remoteHand = null;
+  net.remoteActionAt = 0;
+}
 
-        function updateHUD() {
-            ui.scoreVal.textContent = score;
-            ui.enemyVal.textContent = enemyScore;
-            let mins = Math.floor(timeLeft / 60);
-            let secs = timeLeft % 60;
-            ui.timerVal.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-            
-            if (combo > 1) { ui.comboPanel.classList.add('active'); ui.comboVal.textContent = `x${combo}`; }
-            else { ui.comboPanel.classList.remove('active'); }
-        }
+function destroyNetwork() {
+  net.closing = true;
 
-        function generateRoomCode() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let res = '';
-            for (let i = 0; i < 6; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
-            return res;
-        }
+  try {
+    if (net.connection) {
+      net.connection.close();
+    }
+  } catch (_) {}
 
-        function showMainMenuButtons() {
-            ui.btnHost.style.display = 'flex'; ui.btnJoin.style.display = 'flex'; ui.btnSolo.style.display = 'flex';
-            ui.btnBack.style.display = 'none';
-            ui.hostCont.classList.remove('active'); ui.joinCont.classList.remove('active');
-        }
+  try {
+    if (net.peer) {
+      net.peer.destroy();
+    }
+  } catch (_) {}
 
-        function showBackButton() {
-            ui.btnHost.style.display = 'none'; ui.btnJoin.style.display = 'none'; ui.btnSolo.style.display = 'none';
-            ui.btnBack.style.display = 'block';
-        }
+  net.connection = null;
+  net.peer = null;
+  net.connected = false;
+  net.isHost = false;
+  net.roomCode = '';
+  resetNetworkState();
+  net.closing = false;
+}
 
-        ui.btnSolo.onclick = async () => {
-            enterFullscreen();
-            isSoloMode = true; isHost = false; menuActive = false; ui.menu.classList.add('hidden');
-            ui.scorePanel.classList.add('active'); ui.enemyPanel.classList.add('active'); ui.timerPanel.classList.add('active');
-            await initMediaPipe();
-            startCountdown();
-        };
+function sendPacket(packet) {
+  if (!net.connection || !net.connected) return;
 
-        ui.btnHost.onclick = async () => {
-            enterFullscreen(); isHost = true; roomCode = generateRoomCode();
-            ui.hostCont.classList.add('active'); showBackButton();
-            ui.roomDisplay.textContent = roomCode;
-            try {
-                peer = new Peer(roomCode + '_hog', { debug: 0 });
-                peer.on('open', () => { ui.statusDot.classList.remove('connected'); });
-                peer.on('error', (err) => { ui.hostStatus.textContent = "PEER ERROR: " + (err.type || 'unknown'); });
-                peer.on('connection', (conn) => { con = conn; setupConnection(); });
-            } catch(e) { ui.hostStatus.textContent = "NETWORK ERROR"; }
-        };
+  try {
+    net.connection.send({
+      ...packet,
+      from: net.playerName,
+      sentAt: Date.now()
+    });
+  } catch (err) {
+    console.warn('Network send failed:', err);
+  }
+}
 
-        ui.btnJoin.onclick = () => { enterFullscreen(); ui.joinCont.classList.add('active'); showBackButton(); };
-        ui.btnBack.onclick = () => { showMainMenuButtons(); };
+function setupConnection(connection) {
+  net.connection = connection;
 
-        ui.btnCopy.onclick = () => {
-            const textToCopy = ui.roomDisplay.textContent;
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    ui.hostStatus.textContent = "CODE COPIED TO CLIPBOARD";
-                    setTimeout(() => { ui.hostStatus.textContent = "Waiting for opponent..."; }, 2000);
-                }).catch(() => fallbackCopy(textToCopy));
-            } else fallbackCopy(textToCopy);
-        };
+  connection.on('open', () => {
+    net.connected = true;
+    setBadge('ONLINE');
+    showToast('Connected to ' + net.remoteName, 1800);
 
-        function fallbackCopy(text) {
-            const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
-            try { document.execCommand('copy'); ui.hostStatus.textContent = "CODE COPIED"; } catch(e) {}
-            document.body.removeChild(ta); setTimeout(() => { ui.hostStatus.textContent = "Waiting for opponent..."; }, 2000);
-        }
+    sendPacket({
+      type: 'hello',
+      name: net.playerName,
+      game: 'the-hand-of-god',
+      version: 1
+    });
 
-        ui.btnConnect.onclick = async () => {
-            roomCode = ui.roomInput.value.toUpperCase().trim();
-            if (roomCode.length !== 6) { ui.roomInput.style.borderColor = 'var(--red)'; return; }
-            isHost = false;
-            try {
-                peer = new Peer({ debug: 0 });
-                peer.on('open', () => { con = peer.connect(roomCode + '_hog', { reliable: false }); setupConnection(); });
-                peer.on('error', (err) => { ui.hostStatus.textContent = "PEER ERROR: " + (err.type || 'unknown'); });
-            } catch(e) { ui.hostStatus.textContent = "NETWORK ERROR"; }
-        };
+    if (net.isHost) {
+      showScreen(ui.waiting);
+      ui.lobbyCode.textContent = net.roomCode;
+      setLobbyStatus('Room created. Share the code and wait for your opponent.');
+    } else {
+      showScreen(ui.waiting);
+      ui.lobbyCode.textContent = net.roomCode;
+      setLobbyStatus('Connected. Waiting for the host.');
+    }
+  });
 
-        function setupConnection() {
-            con.on('open', () => {
-                ui.statusDot.classList.add('connected'); ui.menu.classList.add('hidden'); menuActive = false;
-                ui.scorePanel.classList.add('active'); ui.enemyPanel.classList.add('active'); ui.timerPanel.classList.add('active');
-                isReady = true; sendPacket({ type: 'ready' });
-                if (peerIsReady) checkReady();
-            });
-            con.on('data', (data) => handlePacket(data));
-            con.on('close', () => { setTimeout(() => location.reload(), 1500); });
-        }
+  connection.on('data', packet => {
+    if (!packet || typeof packet !== 'object') return;
+    handlePacket(packet);
+  });
 
-        function sendPacket(pkt) { if (con && con.open) { try { con.send(pkt); } catch (e) {} } }
+  connection.on('close', () => {
+    if (net.closing) return;
+    net.connected = false;
+    setBadge('DISCONNECTED');
+    showToast('Opponent disconnected', 2500);
 
-        function handlePacket(pkt) {
-            if (pkt.type === 'state') { enemyScore = pkt.score; updateHUD(); }
-            else if (pkt.type === 'ready') { peerIsReady = true; if (isReady) checkReady(); }
-            else if (pkt.type === 'start') { startCountdown(); }
-            else if (pkt.type === 'end') { endMatch(enemyScore < score); }
-        }
+    if (state.mode === 'online' && !state.ended) {
+      state.running = false;
+      showScreen(ui.waiting);
+      setLobbyStatus('Opponent disconnected. Return to the menu or reconnect.');
+    }
+  });
 
-        function checkReady() {
-            if(isReady && peerIsReady && !gameStarted) {
-                if (isHost) { sendPacket({ type: 'start' }); startCountdown(); }
-            }
-        }
+  connection.on('error', err => {
+    console.warn('Peer connection error:', err);
+    setOnlineStatus('Connection error. Check the room code and internet connection.');
+  });
+}
 
-        // --- GAME FLOW ---
-        async function startCountdown() {
-            if (gameStarted) return;
-            await initMediaPipe(); 
-            let count = 3; ui.countdownText.style.opacity = 1; ui.countdownText.textContent = count;
-            const interval = setInterval(() => {
-                count--;
-                if (count > 0) ui.countdownText.textContent = count;
-                else if (count === 0) ui.countdownText.textContent = "GO";
-                else { clearInterval(interval); ui.countdownText.style.opacity = 0; gameStarted = true; startMatch(); }
-            }, 1000);
-        }
+function handlePacket(packet) {
+  if (packet.from) net.remoteName = cleanName(packet.from);
 
-        function startMatch() {
-            timeLeft = 180; score = 0; enemyScore = 0; combo = 0;
-            updateHUD();
-            const timerInterval = setInterval(() => {
-                if (!gameStarted) { clearInterval(timerInterval); return; }
-                timeLeft--;
-                if (combo > 0 && timeLeft % 3 === 0) combo = 0; 
-                updateHUD();
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    endMatch(score > enemyScore);
-                }
-            }, 1000);
-            
-            if (isSoloMode) {
-                const aiInterval = setInterval(() => {
-                    if (!gameStarted) { clearInterval(aiInterval); return; }
-                    if (Math.random() > 0.4) {
-                        enemyScore += 1 + Math.floor(Math.random() * 2);
-                    }
-                    updateHUD();
-                }, 1500);
-            }
-        }
+  switch (packet.type) {
+    case 'hello':
+      sendPacket({
+        type: 'hello_ack',
+        name: net.playerName,
+        game: 'the-hand-of-god',
+        version: 1
+      });
+      break;
 
-        function endMatch(won) {
-            gameStarted = false;
-            ui.countdownText.style.opacity = 1;
-            ui.countdownText.textContent = won ? "VICTORY" : "DEFEAT";
-            if (con && con.open) sendPacket({ type: 'end' });
-            setTimeout(() => { location.reload(); }, 4000);
-        }
+    case 'hello_ack':
+      net.remoteName = cleanName(packet.name || 'Opponent');
+      $('lobbyDescription').textContent =
+        'Playing as ' + net.playerName + ' · Opponent: ' + net.remoteName;
+      setLobbyStatus('Connected. Both players can mark themselves ready.');
+      break;
 
-        // --- MAIN LOOP ---
-        let lastTime = 0; let spawnTimer = 0;
-        function animate(time) {
-            requestAnimationFrame(animate);
-            const dt = Math.min((time - lastTime) / 16.67, 2); lastTime = time;
-            
-            if (handCanvas.width !== window.innerWidth) {
-                handCanvas.width = window.innerWidth;
-                handCanvas.height = window.innerHeight;
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-            }
+    case 'ready':
+      net.remoteReady = true;
+      setLobbyStatus(net.remoteName + ' is ready. Press “I’m ready” when you are.');
+      maybeStartOnlineMatch();
+      break;
 
-            if (gameStarted) {
-                spawnTimer += dt;
-                
-                // Difficulty curve: Start with 1-2 balls, ramp up.
-                // Time starts at 180, goes to 0.
-                const progress = 1 - (timeLeft / 180); // 0 to 1
-                const maxSpheres = Math.floor(2 + (progress * 8)); // 2 to 10 spheres
-                const spawnRate = timeWarpActive ? 120 : (60 - (progress * 40)); // 60 frames to 20 frames
+    case 'start':
+      if (state.mode === 'online' && !state.running && !state.ended) {
+        startOnlineCountdownIfReady();
+      }
+      break;
 
-                if (spawnTimer > spawnRate && spheres.length < maxSpheres) {
-                    spawnTimer = 0;
-                    spawnSphere();
-                }
+    case 'snapshot':
+      net.remoteHand = packet.hand || null;
+      if (typeof packet.score === 'number') {
+        state.opponentScore = packet.score;
+      }
+      if (typeof packet.timeLeft === 'number' && state.mode === 'online') {
+        // Host is authoritative for match time.
+        if (!net.isHost) state.timeLeft = packet.timeLeft;
+      }
+      break;
 
-                const speedMod = timeWarpActive ? 0.4 : 1.0;
-                for (let i = spheres.length - 1; i >= 0; i--) {
-                    const s = spheres[i];
-                    s.mesh.position.x += s.velocity.x * speedMod * dt;
-                    s.mesh.position.y += s.velocity.y * speedMod * dt;
-                    s.mesh.position.z += s.velocity.z * speedMod * dt;
-                    
-                    s.mesh.rotation.x += 0.05 * dt;
-                    s.mesh.rotation.y += 0.05 * dt;
-                    
-                    // Cleanup if it passes the camera
-                    if (s.mesh.position.z > 15) {
-                        scene.remove(s.mesh);
-                        spheres.splice(i, 1);
-                        if (s.type === 'gold') combo = 0; 
-                    }
-                }
-                checkCollisionsAndDrawTrails();
-                updateHUD();
-                if (con && con.open) sendPacket({ type: 'state', score: score });
-            } else if (menuActive) {
-                camera.position.x = Math.sin(time * 0.0002) * 5;
-                camera.position.y = Math.cos(time * 0.0002) * 3;
-                camera.lookAt(0, 0, 0);
-                handCtx.clearRect(0,0,handCanvas.width, handCanvas.height);
-            }
-            renderer.render(scene, camera);
-        }
+    case 'score':
+      if (typeof packet.score === 'number') {
+        state.opponentScore = packet.score;
+      }
+      break;
 
-        window.addEventListener('resize', () => {
-            handCanvas.width = window.innerWidth;
-            handCanvas.height = window.innerHeight;
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-        });
+    case 'catch':
+      // A catch event is broadcast so the other client can mirror ownership.
+      mirrorObjectOwnership(packet.id, 'remote');
+      break;
 
-        handCanvas.width = window.innerWidth;
-        handCanvas.height = window.innerHeight;
-        animate(0);
-    </script>
+    case 'throw':
+      mirrorObjectThrow(packet);
+      break;
+
+    case 'finish':
+      if (typeof packet.score === 'number') {
+        state.opponentScore = packet.score;
+      }
+      break;
+
+    case 'leave':
+      showToast('Your opponent left the match');
+      break;
+  }
+}
+
+function mirrorObjectOwnership(id, owner) {
+  const item = objects.find(o => o.id === id);
+  if (!item) return;
+  item.owner = owner;
+}
+
+function mirrorObjectThrow(packet) {
+  const item = objects.find(o => o.id === packet.id);
+  if (!item) return;
+
+  item.owner = null;
+  item.x = Number.isFinite(packet.x) ? packet.x : item.x;
+  item.y = Number.isFinite(packet.y) ? packet.y : item.y;
+  item.vx = Number.isFinite(packet.vx) ? packet.vx : 0;
+  item.vy = Number.isFinite(packet.vy) ? packet.vy : 0;
+
+  if (typeof packet.score === 'number') {
+    state.opponentScore = packet.score;
+  }
+}
+
+async function createOnlineRoom() {
+  destroyNetwork();
+  resetNetworkState();
+
+  net.isHost = true;
+  net.playerName = cleanName($('playerName').value);
+  net.roomCode = makeRoomCode();
+
+  $('hostBtn').disabled = true;
+  $('joinBtn').disabled = true;
+  setOnlineStatus('Creating room…');
+
+  try {
+    if (!window.Peer) throw new Error('PeerJS did not load. Check your connection.');
+
+    net.peer = new Peer(net.roomCode + '_hog');
+
+    net.peer.on('open', id => {
+      $('hostBtn').disabled = false;
+      $('joinBtn').disabled = false;
+      ui.hostRoom.classList.remove('hidden');
+      ui.roomDisplay.textContent = net.roomCode;
+      ui.lobbyCode.textContent = net.roomCode;
+      setOnlineStatus('Room ready. Share the code with your friend.');
+      setBadge('ROOM CREATED');
+    });
+
+    net.peer.on('connection', connection => {
+      if (net.connection && net.connected) {
+        connection.close();
+        return;
+      }
+
+      setupConnection(connection);
+    });
+
+    net.peer.on('error', err => {
+      console.error(err);
+      $('hostBtn').disabled = false;
+      $('joinBtn').disabled = false;
+
+      if (err.type === 'unavailable-id') {
+        setOnlineStatus('Room code collision. Tap Create Room again.');
+      } else {
+        setOnlineStatus('Unable to create room: ' + (err.type || 'network error'));
+      }
+    });
+  } catch (error) {
+    $('hostBtn').disabled = false;
+    $('joinBtn').disabled = false;
+    setOnlineStatus(error.message || 'Unable to create room.');
+  }
+}
+
+function joinOnlineRoom() {
+  destroyNetwork();
+  resetNetworkState();
+
+  net.isHost = false;
+  net.playerName = cleanName($('playerName').value);
+  net.roomCode = $('joinCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+
+  if (net.roomCode.length !== 6) {
+    setOnlineStatus('Enter the complete six-character room code.');
+    return;
+  }
+
+  $('hostBtn').disabled = true;
+  $('joinBtn').disabled = true;
+  setOnlineStatus('Connecting to room ' + net.roomCode + '…');
+
+  try {
+    if (!window.Peer) throw new Error('PeerJS did not load. Check your connection.');
+
+    net.peer = new Peer();
+
+    net.peer.on('open', () => {
+      const connection = net.peer.connect(net.roomCode + '_hog', {
+        reliable: true,
+        serialization: 'json'
+      });
+
+      setupConnection(connection);
+
+      setTimeout(() => {
+        $('hostBtn').disabled = false;
+        $('joinBtn').disabled = false;
+      }, 1800);
+    });
+
+    net.peer.on('error', err => {
+      console.error(err);
+      $('hostBtn').disabled = false;
+      $('joinBtn').disabled = false;
+      setOnlineStatus('Connection failed. Check the code and try again.');
+    });
+  } catch (error) {
+    $('hostBtn').disabled = false;
+    $('joinBtn').disabled = false;
+    setOnlineStatus(error.message || 'Unable to join room.');
+  }
+}
+
+function maybeStartOnlineMatch() {
+  if (!net.connected || !net.localReady || !net.remoteReady) return;
+
+  setLobbyStatus('Both players ready. Starting duel…');
+
+  if (net.isHost) {
+    sendPacket({ type: 'start', at: Date.now() });
+    launchOnlineMatch();
+  }
+}
+
+function startOnlineCountdownIfReady() {
+  if (net.localReady && net.remoteReady) launchOnlineMatch();
+}
+
+function launchOnlineMatch() {
+  if (state.running || state.ended) return;
+
+  showScreen(null);
+  ui.hud.style.display = 'grid';
+  ui.bottom.style.display = 'flex';
+  ui.center.style.display = 'block';
+
+  state.mode = 'online';
+  state.score = 0;
+  state.opponentScore = 0;
+  state.combo = 1;
+  state.comboHits = 0;
+  state.timeLeft = 180;
+  state.ended = false;
+  state.running = false;
+  state.lastSpawn = 0;
+  state.lastFrame = performance.now();
+
+  clearGameObjects();
+  heldObject = null;
+
+  for (let i = 0; i < 5; i++) addOrb();
+  beginCountdown();
+}
+
+/* =========================
+   MENU EVENTS
+   ========================= */
+
+$('soloBtn').addEventListener('click', () => {
+  setHomeStatus('');
+  startGame('solo');
+});
+
+$('onlineBtn').addEventListener('click', () => {
+  showScreen(ui.online);
+  ui.hostRoom.classList.add('hidden');
+  setOnlineStatus('Online play needs an internet connection.');
+});
+
+$('backHomeBtn').addEventListener('click', () => {
+  destroyNetwork();
+  showScreen(ui.home);
+});
+
+$('hostBtn').addEventListener('click', createOnlineRoom);
+$('joinBtn').addEventListener('click', joinOnlineRoom);
+
+$('copyCodeBtn').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(net.roomCode);
+    showToast('ROOM CODE COPIED');
+  } catch (_) {
+    showToast('Room code: ' + net.roomCode, 2500);
+  }
+});
+
+$('readyBtn').addEventListener('click', () => {
+  if (!net.connected) {
+    setLobbyStatus('Connect to your opponent first.');
+    return;
+  }
+
+  if (net.localReady) return;
+
+  net.localReady = true;
+  $('readyBtn').textContent = 'READY ✓';
+  setLobbyStatus('You are ready. Waiting for the other player.');
+  sendPacket({ type: 'ready', name: net.playerName });
+  maybeStartOnlineMatch();
+});
+
+$('cancelOnlineBtn').addEventListener('click', () => {
+  sendPacket({ type: 'leave' });
+  destroyNetwork();
+  stopCamera();
+  showScreen(ui.online);
+});
+
+$('exitBtn').addEventListener('click', () => {
+  if (state.mode === 'online') sendPacket({ type: 'leave' });
+  destroyNetwork();
+  exitToMenu();
+});
+
+$('againBtn').addEventListener('click', () => {
+  if (state.mode === 'online') {
+    state.ended = false;
+    state.running = false;
+    resetNetworkState();
+    showScreen(ui.waiting);
+    ui.readyBtn.textContent = "I'M READY";
+    setLobbyStatus('Ready for another duel?');
+  } else {
+    startGame('solo');
+  }
+});
+
+$('resultHomeBtn').addEventListener('click', () => {
+  destroyNetwork();
+  exitToMenu();
+});
+
+$('joinCode').addEventListener('input', e => {
+  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+});
+
+$('playerName').addEventListener('change', e => {
+  net.playerName = cleanName(e.target.value);
+});
+
+/* =========================
+   MAIN FRAME LOOP
+   ========================= */
+
+function mainLoop(now) {
+  gameTick(now);
+  requestAnimationFrame(mainLoop);
+}
+
+window.addEventListener('resize', resize);
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && state.running) {
+    showToast('Return to the game to continue');
+  }
+});
+
+window.addEventListener('beforeunload', () => {
+  try {
+    sendPacket({ type: 'leave' });
+    stopCamera();
+    destroyNetwork();
+  } catch (_) {}
+});
+
+initThree();
+updateHUD();
+requestAnimationFrame(mainLoop);
+
+})();
+</script>
 </body>
 </html>
